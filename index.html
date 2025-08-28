@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>جستجوی موجودی کالا</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://unpkg.com/papaparse@5.3.2/papaparse.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      direction: rtl;
+      padding: 20px;
+    }
+    #reader {
+      width: 300px;
+      margin: auto;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 12px;
+      background: #f3f3f3;
+      display: inline-block;
+      min-width: 220px;
+    }
+    input, button {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      cursor: pointer;
+      background: #007bff;
+      color: white;
+      border: none;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <h2>📦 جستجوی موجودی کالا</h2>
+  <p>می‌توانید بارکد را اسکن کنید یا دستی کد/نام کالا را وارد کنید.</p>
+
+  <!-- بخش بارکد -->
+  <div id="reader"></div>
+
+  <!-- بخش جستجوی دستی -->
+  <div>
+    <input type="text" id="manualInput" placeholder="کد یا نام کالا را وارد کنید">
+    <button onclick="searchManual()">🔍 جستجو</button>
+  </div>
+
+  <!-- آپلود فایل CSV -->
+  <div>
+    <label>📂 بارگذاری فایل CSV (از اکسل خروجی بگیرید): </label>
+    <input type="file" id="csvFile" accept=".csv" />
+  </div>
+
+  <!-- نتیجه -->
+  <div class="result" id="result">هنوز بارکدی اسکن یا جستجو نشده</div>
+
+  <script>
+    // دیتابیس پیش‌فرض
+    const products = [
+      { barcode: "12345", name: "پیچ سایز ۱۰", stock: 250 },
+      { barcode: "67890", name: "مهره M8", stock: 120 },
+      { barcode: "11111", name: "واشر تخت", stock: 75 },
+    ];
+
+    // تبدیل اعداد فارسی به انگلیسی
+    function toEnglishDigits(str) {
+      return str.replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+    }
+
+    // نمایش نتیجه
+    function showResult(product) {
+      const resultDiv = document.getElementById("result");
+      if (product) {
+        resultDiv.innerHTML = `✅ نام کالا: <b>${product.name}</b><br>📦 موجودی: <b>${product.stock}</b>`;
+      } else {
+        resultDiv.innerHTML = "❌ این کالا در دیتابیس موجود نیست";
+      }
+    }
+
+    // جستجو با اسکن بارکد
+    function onScanSuccess(decodedText) {
+      decodedText = toEnglishDigits(decodedText.trim());
+      const product = products.find(p => p.barcode === decodedText);
+      showResult(product);
+    }
+    function onScanFailure(error) {
+      // خطاهای موقت اسکن
+    }
+
+    // جستجو دستی
+    function searchManual() {
+      let text = document.getElementById("manualInput").value.trim();
+      text = toEnglishDigits(text);
+
+      let product = products.find(p => p.barcode === text);
+      if (!product) {
+        product = products.find(p => p.name.includes(text));
+      }
+      showResult(product);
+    }
+
+    // بارگذاری CSV
+    document.getElementById("csvFile").addEventListener("change", function(e) {
+      const file = e.target.files[0];
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          products.length = 0; // پاک کردن دیتای قبلی
+          results.data.forEach(row => {
+            if (row.barcode && row.name && row.stock) {
+              products.push({
+                barcode: toEnglishDigits(String(row.barcode).trim()),
+                name: String(row.name).trim(),
+                stock: parseInt(toEnglishDigits(String(row.stock).trim()))
+              });
+            }
+          });
+          alert("✅ دیتای اکسل (CSV) با موفقیت بارگذاری شد!");
+          console.log("دیتای لود شده:", products); // برای تست
+        }
+      });
+    });
+
+    // فعال کردن اسکنر
+    let html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader", { fps: 10, qrbox: 250 }
+    );
+    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+  </script>
+</body>
+</html>
