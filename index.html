@@ -1,23 +1,32 @@
+
 <!DOCTYPE html>
 <html lang="fa">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>📦 جستجوی موجودی کالا</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <title>جستجوی موجودی کالا - Code128</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
   <script src="https://unpkg.com/papaparse@5.3.2/papaparse.min.js"></script>
-  <script src="https://unpkg.com/quagga@0.12.1/dist/quagga.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
       text-align: center;
       direction: rtl;
       padding: 20px;
-      background: #f9f9f9;
     }
-    #reader, #scanner-container {
+    #camera {
       width: 300px;
+      height: 200px;
       margin: auto;
+      border: 2px dashed #aaa;
+      border-radius: 12px;
+      position: relative;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      object-fit: cover;
     }
     .result {
       margin-top: 20px;
@@ -45,34 +54,34 @@
   </style>
 </head>
 <body>
-  <h2>📦 جستجوی موجودی کالا</h2>
+  <h2>📦 جستجوی موجودی کالا (Code128)</h2>
   <p>می‌توانید بارکد را اسکن کنید یا دستی کد/نام کالا را وارد کنید.</p>
 
-  <div>
-    <button onclick="startQR()">اسکن QR</button>
-    <button onclick="startBarcode()">اسکن بارکد</button>
-  </div>
+  <!-- بخش بارکد -->
+  <div id="camera"></div>
+  <button onclick="startScanner()">شروع اسکن</button>
+  <button onclick="stopScanner()">توقف اسکن</button>
 
-  <div id="reader" style="display:none"></div>
-  <div id="scanner-container" style="display:none"></div>
-
+  <!-- بخش جستجوی دستی -->
   <div>
     <input type="text" id="manualInput" placeholder="کد یا نام کالا را وارد کنید">
     <button onclick="searchManual()">🔍 جستجو</button>
   </div>
 
+  <!-- آپلود فایل CSV -->
   <div>
     <label>📂 بارگذاری فایل CSV (از اکسل خروجی بگیرید): </label>
     <input type="file" id="csvFile" accept=".csv" />
   </div>
 
+  <!-- نتیجه -->
   <div class="result" id="result">هنوز بارکدی اسکن یا جستجو نشده</div>
 
   <script>
     const products = [
-      { barcode: "12345", name: "پیچ سایز ۱۰", stock: 250 },
-      { barcode: "67890", name: "مهره M8", stock: 120 },
-      { barcode: "A12B34", name: "واشر تخت", stock: 75 },
+      { barcode: "A123B", name: "پیچ سایز ۱۰", stock: 250 },
+      { barcode: "B456C", name: "مهره M8", stock: 120 },
+      { barcode: "C789D", name: "واشر تخت", stock: 75 },
     ];
 
     function toEnglishDigits(str) {
@@ -81,19 +90,20 @@
 
     function showResult(product, scannedCode = null) {
       const resultDiv = document.getElementById("result");
+      if (scannedCode) {
+        resultDiv.innerHTML = `🔍 بارکد شناسایی‌شده: <b>${scannedCode}</b><br>`;
+      }
       if (product) {
-        resultDiv.innerHTML = `✅ نام کالا: <b>${product.name}</b><br>📦 موجودی: <b>${product.stock}</b><br>🏷️ کد: <b>${product.barcode}</b>`;
-      } else if (scannedCode) {
-        resultDiv.innerHTML = `🔍 بارکد شناسایی شد: <b>${scannedCode}</b><br>❌ این کالا در دیتابیس موجود نیست`;
+        resultDiv.innerHTML += `✅ نام کالا: <b>${product.name}</b><br>📦 موجودی: <b>${product.stock}</b>`;
       } else {
-        resultDiv.innerHTML = "❌ این کالا در دیتابیس موجود نیست";
+        resultDiv.innerHTML += "❌ این کالا در دیتابیس موجود نیست";
       }
     }
 
     function searchManual() {
       let text = document.getElementById("manualInput").value.trim();
       text = toEnglishDigits(text);
-      let product = products.find(p => p.barcode.toUpperCase() === text.toUpperCase());
+      let product = products.find(p => p.barcode === text);
       if (!product) {
         product = products.find(p => p.name.includes(text));
       }
@@ -121,58 +131,45 @@
       });
     });
 
-    let qrScanner;
-    function startQR() {
-      stopScanners();
-      document.getElementById("reader").style.display = "block";
-      qrScanner = new Html5Qrcode("reader");
-      qrScanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        (decodedText) => {
-          decodedText = toEnglishDigits(decodedText.trim());
-          const product = products.find(p => p.barcode.toUpperCase() === decodedText.toUpperCase());
-          showResult(product, decodedText);
-          qrScanner.stop();
-        },
-        (err) => {}
-      );
-    }
-
-    function startBarcode() {
-      stopScanners();
-      document.getElementById("scanner-container").style.display = "block";
+    function startScanner() {
+      if (Quagga.initialized) return;
       Quagga.init({
         inputStream: {
+          name: "Live",
           type: "LiveStream",
-          target: document.querySelector('#scanner-container'),
-          constraints: { facingMode: "environment" }
+          target: document.querySelector('#camera'),
+          constraints: {
+            facingMode: "environment"
+          }
         },
         decoder: {
-          readers: ["code_128_reader","code_39_reader","ean_reader","upc_reader"]
+          readers: ["code_128_reader", "code_39_reader", "ean_reader", "upc_reader"]
         }
       }, function(err) {
         if (err) {
-          alert("⚠️ خطا در فعال‌سازی دوربین");
           console.error(err);
+          alert("خطا در دسترسی به دوربین!");
           return;
         }
+        Quagga.initialized = true;
         Quagga.start();
       });
 
-      Quagga.onDetected(function(result) {
-        const code = toEnglishDigits(result.codeResult.code.trim());
-        const product = products.find(p => p.barcode.toUpperCase() === code.toUpperCase());
-        showResult(product, code);
+      Quagga.onDetected(function(data) {
+        const code = data.codeResult.code.trim();
         Quagga.stop();
+        Quagga.initialized = false;
+        const product = products.find(p => p.barcode === code);
+        showResult(product, code);
       });
     }
 
-    function stopScanners() {
-      document.getElementById("reader").style.display = "none";
-      document.getElementById("scanner-container").style.display = "none";
-      try { if (qrScanner) qrScanner.stop(); } catch(e){}
-      try { Quagga.stop(); } catch(e){}
+    function stopScanner() {
+      if (Quagga.initialized) {
+        Quagga.stop();
+        Quagga.initialized = false;
+        alert("اسکن متوقف شد");
+      }
     }
   </script>
 </body>
