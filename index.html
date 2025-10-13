@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📦 جستجوی موجودی کالا</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://unpkg.com/papaparse@5.3.2/papaparse.min.js"></script>
+  <script src="https://unpkg.com/quagga@0.12.1/dist/quagga.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      direction: rtl;
+      padding: 20px;
+    }
+    #camera, #reader {
+      width: 300px;
+      margin: auto;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 12px;
+      background: #f3f3f3;
+      display: inline-block;
+      min-width: 220px;
+    }
+    input, button {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      cursor: pointer;
+      background: #007bff;
+      color: white;
+      border: none;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <h2>📦 جستجوی موجودی کالا</h2>
+  <p>می‌توانید بارکد را اسکن کنید یا دستی کد/نام کالا را وارد کنید.</p>
+
+  <!-- بخش اسکنر -->
+  <div>
+    <button onclick="startQR()">اسکن QR</button>
+    <button onclick="startBarcode()">اسکن بارکد</button>
+  </div>
+
+  <div id="reader" style="display:none"></div>
+  <div id="camera" style="display:none"></div>
+
+  <!-- بخش جستجوی دستی -->
+  <div>
+    <input type="text" id="manualInput" placeholder="کد یا نام کالا را وارد کنید">
+    <button onclick="searchManual()">🔍 جستجو</button>
+  </div>
+
+  <!-- آپلود فایل CSV -->
+  <div>
+    <label>📂 بارگذاری فایل CSV (از اکسل خروجی بگیرید): </label>
+    <input type="file" id="csvFile" accept=".csv" />
+  </div>
+
+  <!-- نتیجه -->
+  <div class="result" id="result">هنوز بارکدی اسکن یا جستجو نشده</div>
+
+  <script>
+    const products = [
+      { barcode: "A123B", name: "پیچ سایز ۱۰", stock: 250 },
+      { barcode: "B456C", name: "مهره M8", stock: 120 },
+      { barcode: "C789D", name: "واشر تخت", stock: 75 },
+    ];
+
+    function toEnglishDigits(str) {
+      return str.replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+    }
+
+    function showResult(product, scannedCode = null) {
+      const resultDiv = document.getElementById("result");
+      if (scannedCode) {
+        resultDiv.innerHTML = `🔍 بارکد شناسایی‌شده: <b>${scannedCode}</b><br>`;
+      }
+      if (product) {
+        resultDiv.innerHTML += `✅ نام کالا: <b>${product.name}</b><br>📦 موجودی: <b>${product.stock}</b>`;
+      } else {
+        resultDiv.innerHTML += "❌ این کالا در دیتابیس موجود نیست";
+      }
+    }
+
+    function searchManual() {
+      let text = document.getElementById("manualInput").value.trim();
+      text = toEnglishDigits(text);
+      let product = products.find(p => p.barcode === text);
+      if (!product) {
+        product = products.find(p => p.name.includes(text));
+      }
+      showResult(product, text);
+    }
+
+    document.getElementById("csvFile").addEventListener("change", function(e) {
+      const file = e.target.files[0];
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          products.length = 0;
+          results.data.forEach(row => {
+            if (row.barcode && row.name && row.stock) {
+              products.push({
+                barcode: toEnglishDigits(String(row.barcode).trim()),
+                name: String(row.name).trim(),
+                stock: parseInt(toEnglishDigits(String(row.stock).trim()))
+              });
+            }
+          });
+          alert("✅ دیتای اکسل (CSV) با موفقیت بارگذاری شد!");
+        }
+      });
+    });
+
+    function startQR() {
+      stopScanners();
+      document.getElementById("reader").style.display = "block";
+      const qrScanner = new Html5Qrcode("reader");
+      qrScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        (decodedText) => {
+          decodedText = toEnglishDigits(decodedText.trim());
+          const product = products.find(p => p.barcode.toUpperCase() === decodedText.toUpperCase());
+          showResult(product, decodedText);
+          qrScanner.stop();
+        },
+        (err) => {}
+      );
+    }
+
+    function startBarcode() {
+      stopScanners();
+      document.getElementById("camera").style.display = "block";
+      Quagga.init({
+        inputStream: {
+          type: "LiveStream",
+          target: document.querySelector('#camera'),
+          constraints: { facingMode: "environment" }
+        },
+        decoder: {
+          readers: ["code_128_reader", "code_39_reader", "ean_reader", "upc_reader"]
+        }
+      }, function(err) {
+        if (err) {
+          alert("⚠️ خطا در فعال‌سازی دوربین");
+          console.error(err);
+          return;
+        }
+        Quagga.start();
+      });
+
+      Quagga.onDetected(function(result) {
+        const code = toEnglishDigits(result.codeResult.code.trim());
+        const product = products.find(p => p.barcode.toUpperCase() === code.toUpperCase());
+        showResult(product, code);
+        Quagga.stop();
+      });
+    }
+
+    function stopScanners() {
+      document.getElementById("reader").style.display = "none";
+      document.getElementById("camera").style.display = "none";
+      try { if (qrScanner) qrScanner.stop(); } catch(e){}
+      try { Quagga.stop(); } catch(e){}
+    }
+  </script>
+</body>
+</html>
