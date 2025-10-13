@@ -3,17 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>جستجوی موجودی کالا</title>
+  <title>📦 جستجوی موجودی کالا</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://unpkg.com/papaparse@5.3.2/papaparse.min.js"></script>
+  <script src="https://unpkg.com/quagga@0.12.1/dist/quagga.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
       text-align: center;
       direction: rtl;
       padding: 20px;
+      background: #f9f9f9;
     }
-    #reader {
+    #reader, #scanner-container {
       width: 300px;
       margin: auto;
     }
@@ -46,77 +48,65 @@
   <h2>📦 جستجوی موجودی کالا</h2>
   <p>می‌توانید بارکد را اسکن کنید یا دستی کد/نام کالا را وارد کنید.</p>
 
-  <!-- بخش بارکد -->
-  <div id="reader"></div>
+  <div>
+    <button onclick="startQR()">اسکن QR</button>
+    <button onclick="startBarcode()">اسکن بارکد</button>
+  </div>
 
-  <!-- بخش جستجوی دستی -->
+  <div id="reader" style="display:none"></div>
+  <div id="scanner-container" style="display:none"></div>
+
   <div>
     <input type="text" id="manualInput" placeholder="کد یا نام کالا را وارد کنید">
     <button onclick="searchManual()">🔍 جستجو</button>
   </div>
 
-  <!-- آپلود فایل CSV -->
   <div>
     <label>📂 بارگذاری فایل CSV (از اکسل خروجی بگیرید): </label>
     <input type="file" id="csvFile" accept=".csv" />
   </div>
 
-  <!-- نتیجه -->
   <div class="result" id="result">هنوز بارکدی اسکن یا جستجو نشده</div>
 
   <script>
-    // دیتابیس پیش‌فرض
     const products = [
       { barcode: "12345", name: "پیچ سایز ۱۰", stock: 250 },
       { barcode: "67890", name: "مهره M8", stock: 120 },
-      { barcode: "11111", name: "واشر تخت", stock: 75 },
+      { barcode: "A12B34", name: "واشر تخت", stock: 75 },
     ];
 
-    // تبدیل اعداد فارسی به انگلیسی
     function toEnglishDigits(str) {
       return str.replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
     }
 
-    // نمایش نتیجه
-    function showResult(product) {
+    function showResult(product, scannedCode = null) {
       const resultDiv = document.getElementById("result");
       if (product) {
-        resultDiv.innerHTML = `✅ نام کالا: <b>${product.name}</b><br>📦 موجودی: <b>${product.stock}</b>`;
+        resultDiv.innerHTML = `✅ نام کالا: <b>${product.name}</b><br>📦 موجودی: <b>${product.stock}</b><br>🏷️ کد: <b>${product.barcode}</b>`;
+      } else if (scannedCode) {
+        resultDiv.innerHTML = `🔍 بارکد شناسایی شد: <b>${scannedCode}</b><br>❌ این کالا در دیتابیس موجود نیست`;
       } else {
         resultDiv.innerHTML = "❌ این کالا در دیتابیس موجود نیست";
       }
     }
 
-    // جستجو با اسکن بارکد
-    function onScanSuccess(decodedText) {
-      decodedText = toEnglishDigits(decodedText.trim());
-      const product = products.find(p => p.barcode === decodedText);
-      showResult(product);
-    }
-    function onScanFailure(error) {
-      // خطاهای موقت اسکن
-    }
-
-    // جستجو دستی
     function searchManual() {
       let text = document.getElementById("manualInput").value.trim();
       text = toEnglishDigits(text);
-
-      let product = products.find(p => p.barcode === text);
+      let product = products.find(p => p.barcode.toUpperCase() === text.toUpperCase());
       if (!product) {
         product = products.find(p => p.name.includes(text));
       }
-      showResult(product);
+      showResult(product, text);
     }
 
-    // بارگذاری CSV
     document.getElementById("csvFile").addEventListener("change", function(e) {
       const file = e.target.files[0];
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
         complete: function(results) {
-          products.length = 0; // پاک کردن دیتای قبلی
+          products.length = 0;
           results.data.forEach(row => {
             if (row.barcode && row.name && row.stock) {
               products.push({
@@ -127,16 +117,63 @@
             }
           });
           alert("✅ دیتای اکسل (CSV) با موفقیت بارگذاری شد!");
-          console.log("دیتای لود شده:", products); // برای تست
         }
       });
     });
 
-    // فعال کردن اسکنر
-    let html5QrcodeScanner = new Html5QrcodeScanner(
-      "reader", { fps: 10, qrbox: 250 }
-    );
-    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    let qrScanner;
+    function startQR() {
+      stopScanners();
+      document.getElementById("reader").style.display = "block";
+      qrScanner = new Html5Qrcode("reader");
+      qrScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        (decodedText) => {
+          decodedText = toEnglishDigits(decodedText.trim());
+          const product = products.find(p => p.barcode.toUpperCase() === decodedText.toUpperCase());
+          showResult(product, decodedText);
+          qrScanner.stop();
+        },
+        (err) => {}
+      );
+    }
+
+    function startBarcode() {
+      stopScanners();
+      document.getElementById("scanner-container").style.display = "block";
+      Quagga.init({
+        inputStream: {
+          type: "LiveStream",
+          target: document.querySelector('#scanner-container'),
+          constraints: { facingMode: "environment" }
+        },
+        decoder: {
+          readers: ["code_128_reader","code_39_reader","ean_reader","upc_reader"]
+        }
+      }, function(err) {
+        if (err) {
+          alert("⚠️ خطا در فعال‌سازی دوربین");
+          console.error(err);
+          return;
+        }
+        Quagga.start();
+      });
+
+      Quagga.onDetected(function(result) {
+        const code = toEnglishDigits(result.codeResult.code.trim());
+        const product = products.find(p => p.barcode.toUpperCase() === code.toUpperCase());
+        showResult(product, code);
+        Quagga.stop();
+      });
+    }
+
+    function stopScanners() {
+      document.getElementById("reader").style.display = "none";
+      document.getElementById("scanner-container").style.display = "none";
+      try { if (qrScanner) qrScanner.stop(); } catch(e){}
+      try { Quagga.stop(); } catch(e){}
+    }
   </script>
 </body>
 </html>
