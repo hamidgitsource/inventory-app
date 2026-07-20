@@ -1,116 +1,165 @@
 <!DOCTYPE html>
-<html lang="fa">
+<html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>📦 جانمایی کالا </title>
+  <title>📦 سیستم هوشمند جانمایی کالا</title>
+
+  <!-- Tailwind CSS برای استایل‌دهی سریع و مدرن -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- SweetAlert2 برای پیام‌های هشدار و موفقیت زیبا -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- کتابخانه‌های اسکن و پردازش -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://unpkg.com/papaparse@5.3.2/papaparse.min.js"></script>
   <script src="https://unpkg.com/quagga@0.12.1/dist/quagga.min.js"></script>
+
   <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      direction: rtl;
-      padding: 20px;
-    }
-    #camera, #reader {
-      width: 300px;
-      margin: auto;
-    }
-    .result {
-      margin-top: 20px;
-      padding: 15px;
-      border-radius: 12px;
-      background: #f3f3f3;
-      display: inline-block;
-      min-width: 220px;
-    }
-    input, button {
-      padding: 8px;
-      margin: 5px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-    button {
-      cursor: pointer;
-      background: #007bff;
-      color: white;
-      border: none;
-    }
-    button:hover {
-      background: #0056b3;
-    }
+    body { font-family: Tahoma, Arial, sans-serif; } /* فونت مناسب */
+    #reader video, #camera video { border-radius: 12px; width: 100%; max-height: 300px; object-fit: cover; }
   </style>
 </head>
-<body>
-  <h2>📦 جانمایی کالا </h2>
-  <p>کیو آر کد را اسکن کنید یا کد/نام کالا را وارد کنید.</p>
+<body class="bg-gray-100 text-gray-800 flex justify-center min-h-screen p-4 md:p-8">
 
-  <!-- بخش اسکنر -->
-  <div>
-    <button onclick="startQR()">اسکن QR</button>
-    <button onclick="startBarcode()">اسکن بارکد</button>
+  <div class="bg-white shadow-xl rounded-2xl w-full max-w-md p-6 space-y-6">
+    
+    <!-- هدر نرم‌افزار -->
+    <div class="text-center">
+      <h2 class="text-2xl font-bold text-blue-600 mb-1">📦 سیستم جانمایی کالا</h2>
+      <p class="text-gray-500 text-sm">جستجو، اسکن و مدیریت موجودی انبار</p>
+    </div>
+
+    <!-- دکمه‌های کنترل دوربین -->
+    <div class="flex gap-2 justify-center">
+      <button onclick="startQR()" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-xl transition shadow text-sm font-medium">
+        اسکن QR
+      </button>
+      <button onclick="startBarcode()" class="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-2.5 rounded-xl transition shadow text-sm font-medium">
+        اسکن بارکد
+      </button>
+      <button onclick="stopScanners()" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-xl transition shadow text-sm font-medium">
+        توقف دوربین
+      </button>
+    </div>
+
+    <!-- فریم‌های نمایش دوربین -->
+    <div id="reader" class="hidden border-2 border-dashed border-gray-300 rounded-xl p-2 bg-gray-50"></div>
+    <div id="camera" class="hidden border-2 border-dashed border-gray-300 rounded-xl p-2 bg-gray-50"></div>
+
+    <!-- بخش جستجوی دستی -->
+    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+      <label class="block text-sm text-gray-700 mb-2 font-medium">جستجوی دستی:</label>
+      <div class="flex gap-2">
+        <input type="text" id="manualInput" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 outline-none transition" placeholder="کد یا نام کالا...">
+        <button onclick="searchManual()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-sm transition shadow">
+          جستجو 🔍
+        </button>
+      </div>
+    </div>
+
+    <!-- بخش آپلود دیتابیس (CSV) -->
+    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+      <label class="block text-sm text-gray-700 mb-2 font-medium">📂 بروزرسانی لیست کالاها (CSV):</label>
+      <input type="file" id="csvFile" accept=".csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer transition"/>
+      <p class="text-xs text-gray-400 mt-2">داده‌ها در مرورگر ذخیره شده و با رفرش پاک نمی‌شوند.</p>
+    </div>
+
+    <!-- کادر نمایش نتیجه (پنهان به صورت پیش‌فرض) -->
+    <div id="result" class="hidden rounded-xl p-4 text-sm font-medium leading-relaxed border transition-all duration-300"></div>
+
   </div>
-
-  <div id="reader" style="display:none"></div>
-  <div id="camera" style="display:none"></div>
-
-  <!-- بخش جستجوی دستی -->
-  <div>
-    <input type="text" id="manualInput" placeholder="کد یا نام کالا را وارد کنید">
-    <button onclick="searchManual()">🔍 جستجو</button>
-  </div>
-
-  <!-- آپلود فایل CSV -->
-  <div>
-    <label>📂 بارگذاری فایل CSV: </label>
-    <input type="file" id="csvFile" accept=".csv" />
-  </div>
-
-  <!-- نتیجه -->
-  <div class="result" id="result">هنوز بارکدی اسکن یا جستجو نشده</div>
 
   <script>
-    const products = [
+    // --- ۱. مدیریت داده‌ها و LocalStorage ---
+    let products = [];
+    
+    // دیتای پیش‌فرض (در صورتی که هیچ فایلی آپلود نشده باشد)
+    const defaultProducts = [
       { barcode: "A123B", name: "پیچ سایز ۱۰", stock: 250 },
       { barcode: "B456C", name: "مهره M8", stock: 120 },
       { barcode: "C789D", name: "واشر تخت", stock: 75 },
     ];
 
+    // لود کردن داده‌ها از حافظه مرورگر در زمان باز شدن سایت
+    function loadData() {
+      const stored = localStorage.getItem('inventory_data');
+      if (stored) {
+        products = JSON.parse(stored);
+      } else {
+        products = defaultProducts;
+      }
+    }
+    loadData();
+
+    // تابع ذخیره داده‌ها در مرورگر
+    function saveData() {
+      localStorage.setItem('inventory_data', JSON.stringify(products));
+    }
+
+    // --- ۲. توابع کمکی ---
     function toEnglishDigits(str) {
       return str.replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
     }
 
-    function showResult(product, scannedCode = null) {
-      const resultDiv = document.getElementById("result");
-      if (scannedCode) {
-        resultDiv.innerHTML = `🔍 بارکد شناسایی‌شده: <b>${scannedCode}</b><br>`;
-      }
-      if (product) {
-        resultDiv.innerHTML += `✅ نام کالا: <b>${product.name}</b><br>📦 موجودی: <b>${product.stock}</b>`;
-      } else {
-        resultDiv.innerHTML += "❌ این کالا در دیتابیس موجود نیست";
-      }
+    function playSuccessFeedback() {
+      // ایجاد ویبره ۲۰۰ میلی‌ثانیه‌ای در موبایل
+      if (navigator.vibrate) navigator.vibrate(200); 
     }
 
+    // --- ۳. نمایش رابط کاربری نتیجه ---
+    function showResult(product, scannedCode = null) {
+      const resultDiv = document.getElementById("result");
+      // ریست کردن کلاس‌های رنگی
+      resultDiv.classList.remove("hidden", "bg-green-50", "border-green-300", "text-green-900", "bg-red-50", "border-red-300", "text-red-900");
+
+      let html = "";
+      if (scannedCode) {
+        html += `<div class="mb-3 text-gray-500 text-xs">🔍 کد جستجو شده: <span class="font-bold text-gray-800">${scannedCode}</span></div>`;
+      }
+
+      if (product) {
+        playSuccessFeedback(); // پخش ویبره
+        resultDiv.classList.add("bg-green-50", "border-green-300", "text-green-900");
+        html += `
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xl">✅</span>
+            <span class="text-lg font-bold">${product.name}</span>
+          </div>
+          <div class="mt-3 p-3 bg-white rounded-lg border border-green-200 flex justify-between items-center shadow-sm">
+            <span class="text-gray-600">📦 موجودی فعلی:</span>
+            <span class="text-2xl font-black text-blue-600">${product.stock}</span>
+          </div>
+        `;
+      } else {
+        resultDiv.classList.add("bg-red-50", "border-red-300", "text-red-900");
+        html += `<div class="flex items-center gap-2 text-base"><span>❌</span> این کالا در سیستم ثبت نشده است.</div>`;
+      }
+
+      resultDiv.innerHTML = html;
+    }
+
+    // جستجوی متنی
     function searchManual() {
       let text = document.getElementById("manualInput").value.trim();
+      if(!text) return;
+      
       text = toEnglishDigits(text);
-      let product = products.find(p => p.barcode === text);
-      if (!product) {
-        product = products.find(p => p.name.includes(text));
-      }
+      let product = products.find(p => p.barcode === text || p.name.includes(text));
       showResult(product, text);
     }
 
+    // --- ۴. مدیریت فایل CSV و ذخیره ---
     document.getElementById("csvFile").addEventListener("change", function(e) {
       const file = e.target.files[0];
+      if(!file) return;
+
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
         complete: function(results) {
-          products.length = 0;
+          products = []; // پاک کردن دیتای قبلی
           results.data.forEach(row => {
             if (row.barcode && row.name && row.stock) {
               products.push({
@@ -120,44 +169,57 @@
               });
             }
           });
-          alert("✅ دیتای اکسل (CSV) با موفقیت بارگذاری شد!");
+          
+          saveData(); // ذخیره در لوکال استوریج
+
+          // نمایش آلرت حرفه‌ای
+          Swal.fire({
+            icon: 'success',
+            title: 'بروزرسانی موفق',
+            text: 'دیتای جدید با موفقیت در مرورگر ذخیره شد!',
+            confirmButtonText: 'تایید',
+            confirmButtonColor: '#3b82f6'
+          });
+          e.target.value = ""; // ریست کردن ورودی فایل
         }
       });
     });
 
+    // --- ۵. توابع اسکنر (QR و Barcode) ---
+    let qrScanner = null;
+
     function startQR() {
       stopScanners();
-      document.getElementById("reader").style.display = "block";
-      const qrScanner = new Html5Qrcode("reader");
+      document.getElementById("reader").classList.remove("hidden");
+      qrScanner = new Html5Qrcode("reader");
       qrScanner.start(
-        { facingMode: "environment" },
+        { facingMode: "environment" }, // استفاده از دوربین پشت موبایل
         { fps: 10, qrbox: 250 },
         (decodedText) => {
           decodedText = toEnglishDigits(decodedText.trim());
           const product = products.find(p => p.barcode.toUpperCase() === decodedText.toUpperCase());
           showResult(product, decodedText);
-          qrScanner.stop();
+          stopScanners(); // بستن خودکار دوربین بعد از اسکن
         },
         (err) => {}
-      );
+      ).catch(err => {
+        Swal.fire('خطا', 'دوربین در دسترس نیست یا مجوز داده نشده.', 'error');
+      });
     }
 
     function startBarcode() {
       stopScanners();
-      document.getElementById("camera").style.display = "block";
+      document.getElementById("camera").classList.remove("hidden");
       Quagga.init({
         inputStream: {
           type: "LiveStream",
           target: document.querySelector('#camera'),
           constraints: { facingMode: "environment" }
         },
-        decoder: {
-          readers: ["code_128_reader", "code_39_reader", "ean_reader", "upc_reader"]
-        }
+        decoder: { readers: ["code_128_reader", "code_39_reader", "ean_reader", "upc_reader"] }
       }, function(err) {
         if (err) {
-          alert("⚠️ خطا در فعال‌سازی دوربین");
-          console.error(err);
+          Swal.fire('خطا', 'دوربین در دسترس نیست.', 'error');
           return;
         }
         Quagga.start();
@@ -167,14 +229,17 @@
         const code = toEnglishDigits(result.codeResult.code.trim());
         const product = products.find(p => p.barcode.toUpperCase() === code.toUpperCase());
         showResult(product, code);
-        Quagga.stop();
+        stopScanners(); // بستن خودکار دوربین بعد از اسکن
       });
     }
 
     function stopScanners() {
-      document.getElementById("reader").style.display = "none";
-      document.getElementById("camera").style.display = "none";
-      try { if (qrScanner) qrScanner.stop(); } catch(e){}
+      document.getElementById("reader").classList.add("hidden");
+      document.getElementById("camera").classList.add("hidden");
+      if (qrScanner) {
+        qrScanner.stop().catch(e => {});
+        qrScanner = null;
+      }
       try { Quagga.stop(); } catch(e){}
     }
   </script>
