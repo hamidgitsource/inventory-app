@@ -59,154 +59,70 @@
       </div>
     </div>
 
-    <!-- بخش آپلود دیتابیس (CSV) -->
-    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
-      <label class="block text-sm text-gray-700 mb-2 font-medium">📂 بروزرسانی لیست کالاها (CSV):</label>
-      <input type="file" id="csvFile" accept=".csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer transition"/>
-      <p class="text-xs text-gray-400 mt-2">داده‌ها در مرورگر ذخیره شده و با رفرش پاک نمی‌شوند.</p>
+    <!-- بخش اتصال به دیتابیس ابری -->
+    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 text-center">
+      <p class="text-sm text-gray-700 mb-3 font-medium">☁️ اتصال به سرور ابری برقرار است</p>
+      <button onclick="fetchData()" id="refreshBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition shadow w-full font-bold">
+        🔄 دریافت آخرین موجودی
+      </button>
+      <p class="text-xs text-gray-400 mt-2">موجودی به محض باز شدن برنامه به‌صورت خودکار آپدیت می‌شود.</p>
     </div>
-
     <!-- کادر نمایش نتیجه (پنهان به صورت پیش‌فرض) -->
     <div id="result" class="hidden rounded-xl p-4 text-sm font-medium leading-relaxed border transition-all duration-300"></div>
 
   </div>
 
   <script>
-    // --- ۱. مدیریت داده‌ها و LocalStorage ---
+    // --- ۱. آدرس فایل گوگل شیت شما ---
+    // لینک CSV که از گوگل شیت کپی کردید را دقیقاً بین دو کوتیشن زیر قرار دهید:
+    const GOOGLE_SHEET_CSV_URL = "لینک_شما_در_اینجا_قرار_گیرد";
+
     let products = [];
-    
-    // دیتای پیش‌فرض (در صورتی که هیچ فایلی آپلود نشده باشد)
-    const defaultProducts = [
-      { barcode: "A123B", name: "پیچ سایز ۱۰", stock: 250 },
-      { barcode: "B456C", name: "مهره M8", stock: 120 },
-      { barcode: "C789D", name: "واشر تخت", stock: 75 },
-    ];
 
-    // لود کردن داده‌ها از حافظه مرورگر در زمان باز شدن سایت
-    function loadData() {
-      const stored = localStorage.getItem('inventory_data');
-      if (stored) {
-        products = JSON.parse(stored);
-      } else {
-        products = defaultProducts;
-      }
-    }
-    loadData();
+    // --- ۲. دریافت خودکار داده‌ها از سرور گوگل ---
+    function fetchData() {
+      const btn = document.getElementById("refreshBtn");
+      if(btn) btn.innerText = "⏳ در حال دریافت اطلاعات...";
 
-    // تابع ذخیره داده‌ها در مرورگر
-    function saveData() {
-      localStorage.setItem('inventory_data', JSON.stringify(products));
-    }
+      fetch(GOOGLE_SHEET_CSV_URL)
+        .then(response => response.text())
+        .then(csvText => {
+          Papa.parse(csvText, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+              products = []; // پاک کردن دیتای قدیمی
+              results.data.forEach(row => {
+                if (row.barcode && row.name && row.stock) {
+                  products.push({
+                    barcode: toEnglishDigits(String(row.barcode).trim()),
+                    name: String(row.name).trim(),
+                    stock: parseInt(toEnglishDigits(String(row.stock).trim()))
+                  });
+                }
+              });
 
-    // --- ۲. توابع کمکی ---
-    function toEnglishDigits(str) {
-      return str.replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
-    }
-
-    function playSuccessFeedback() {
-      // ایجاد ویبره ۲۰۰ میلی‌ثانیه‌ای در موبایل
-      if (navigator.vibrate) navigator.vibrate(200); 
-    }
-
-    // --- ۳. نمایش رابط کاربری نتیجه ---
-    function showResult(product, scannedCode = null) {
-      const resultDiv = document.getElementById("result");
-      // ریست کردن کلاس‌های رنگی
-      resultDiv.classList.remove("hidden", "bg-green-50", "border-green-300", "text-green-900", "bg-red-50", "border-red-300", "text-red-900");
-
-      let html = "";
-      if (scannedCode) {
-        html += `<div class="mb-3 text-gray-500 text-xs">🔍 کد جستجو شده: <span class="font-bold text-gray-800">${scannedCode}</span></div>`;
-      }
-
-      if (product) {
-        playSuccessFeedback(); // پخش ویبره
-        resultDiv.classList.add("bg-green-50", "border-green-300", "text-green-900");
-        html += `
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-xl">✅</span>
-            <span class="text-lg font-bold">${product.name}</span>
-          </div>
-          <div class="mt-3 p-3 bg-white rounded-lg border border-green-200 flex justify-between items-center shadow-sm">
-            <span class="text-gray-600">📦 موجودی فعلی:</span>
-            <span class="text-2xl font-black text-blue-600">${product.stock}</span>
-          </div>
-        `;
-      } else {
-        resultDiv.classList.add("bg-red-50", "border-red-300", "text-red-900");
-        html += `<div class="flex items-center gap-2 text-base"><span>❌</span> این کالا در سیستم ثبت نشده است.</div>`;
-      }
-
-      resultDiv.innerHTML = html;
-    }
-
-    // جستجوی متنی
-    function searchManual() {
-      let text = document.getElementById("manualInput").value.trim();
-      if(!text) return;
-      
-      text = toEnglishDigits(text);
-      let product = products.find(p => p.barcode === text || p.name.includes(text));
-      showResult(product, text);
-    }
-
-    // --- ۴. مدیریت فایل CSV و ذخیره ---
-    document.getElementById("csvFile").addEventListener("change", function(e) {
-      const file = e.target.files[0];
-      if(!file) return;
-
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: function(results) {
-          products = []; // پاک کردن دیتای قبلی
-          results.data.forEach(row => {
-            if (row.barcode && row.name && row.stock) {
-              products.push({
-                barcode: toEnglishDigits(String(row.barcode).trim()),
-                name: String(row.name).trim(),
-                stock: parseInt(toEnglishDigits(String(row.stock).trim()))
+              if(btn) btn.innerText = "🔄 دریافت آخرین موجودی";
+              
+              // پیام موفقیت آپدیت (اختیاری: بدون نیاز به کلیک بسته می‌شود)
+              Swal.fire({
+                icon: 'success',
+                title: 'بروزرسانی موفق',
+                text: 'آخرین موجودی انبار دریافت شد.',
+                timer: 1500,
+                showConfirmButton: false
               });
             }
           });
-          
-          saveData(); // ذخیره در لوکال استوریج
-
-          // نمایش آلرت حرفه‌ای
-          Swal.fire({
-            icon: 'success',
-            title: 'بروزرسانی موفق',
-            text: 'دیتای جدید با موفقیت در مرورگر ذخیره شد!',
-            confirmButtonText: 'تایید',
-            confirmButtonColor: '#3b82f6'
-          });
-          e.target.value = ""; // ریست کردن ورودی فایل
-        }
-      });
-    });
-
-    // --- ۵. توابع اسکنر (QR و Barcode) ---
-    let qrScanner = null;
-
-    function startQR() {
-      stopScanners();
-      document.getElementById("reader").classList.remove("hidden");
-      qrScanner = new Html5Qrcode("reader");
-      qrScanner.start(
-        { facingMode: "environment" }, // استفاده از دوربین پشت موبایل
-        { fps: 10, qrbox: 250 },
-        (decodedText) => {
-          decodedText = toEnglishDigits(decodedText.trim());
-          const product = products.find(p => p.barcode.toUpperCase() === decodedText.toUpperCase());
-          showResult(product, decodedText);
-          stopScanners(); // بستن خودکار دوربین بعد از اسکن
-        },
-        (err) => {}
-      ).catch(err => {
-        Swal.fire('خطا', 'دوربین در دسترس نیست یا مجوز داده نشده.', 'error');
-      });
+        })
+        .catch(error => {
+          if(btn) btn.innerText = "🔄 دریافت آخرین موجودی";
+          Swal.fire('خطا در اتصال', 'لطفاً اینترنت گوشی را بررسی کنید.', 'error');
+        });
     }
 
+    // فراخوانی خودکار این تابع به محض باز شدن برنامه در گوشی
+    window.onload = fetchData;
     function startBarcode() {
       stopScanners();
       document.getElementById("camera").classList.remove("hidden");
