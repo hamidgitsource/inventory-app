@@ -11,7 +11,6 @@
   <!-- SweetAlert2 برای پیام‌های هشدار و موفقیت زیبا -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-  <!-- فقط از یک کتابخانه قدرتمند برای اسکن QR و بارکد استفاده می‌کنیم -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://unpkg.com/papaparse@5.3.2/papaparse.min.js"></script>
 
@@ -30,7 +29,7 @@
       <p class="text-gray-500 text-sm">جستجو، اسکن و مدیریت موجودی انبار</p>
     </div>
 
-    <!-- دکمه‌های کنترل دوربین (ادغام شده) -->
+    <!-- دکمه‌های کنترل دوربین -->
     <div class="flex gap-2 justify-center">
       <button onclick="startScanner()" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-xl transition shadow text-sm font-bold flex justify-center items-center gap-2">
         📷 اسکن بارکد / QR
@@ -54,10 +53,10 @@
       </div>
     </div>
 
-    <!-- بخش اتصال به گوگل شیت (ابری) -->
+    <!-- بخش اتصال به گوگل شیت -->
     <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 text-center">
       <button onclick="fetchData()" id="refreshBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition shadow w-full font-bold">
-        🔄 دریافت آخرین موجودی از سرور
+        🔄 دریافت آخرین دیتا از سرور
       </button>
       <p class="text-xs text-gray-400 mt-2">اتصال به اینترنت برای آپدیت الزامی است.</p>
     </div>
@@ -95,12 +94,14 @@
                   products.push({
                     barcode: toEnglishDigits(String(row.barcode).trim()),
                     name: String(row.name).trim(),
-                    stock: parseInt(toEnglishDigits(String(row.stock).trim())) || 0
+                    stock: parseInt(toEnglishDigits(String(row.stock).trim())) || 0,
+                    // اضافه شدن جانمایی (اگر خالی بود مینویسد ثبت نشده)
+                    location: row.location && String(row.location).trim() !== "" ? String(row.location).trim() : "ثبت نشده"
                   });
                 }
               });
 
-              if(btn) btn.innerText = "🔄 دریافت آخرین موجودی";
+              if(btn) btn.innerText = "🔄 دریافت آخرین دیتا از سرور";
               
               if(products.length === 0) {
                  Swal.fire('لیست خالی!', 'فایل خوانده شد اما کالایی پیدا نشد.', 'warning');
@@ -108,7 +109,7 @@
                  Swal.fire({
                    icon: 'success',
                    title: 'بروزرسانی موفق',
-                   text: `${products.length} کالا با موفقیت دریافت شد.`,
+                   text: `${products.length} کالا (همراه با جانمایی) دریافت شد.`,
                    timer: 2000,
                    showConfirmButton: false
                  });
@@ -117,7 +118,7 @@
           });
         })
         .catch(error => {
-          if(btn) btn.innerText = "🔄 دریافت آخرین موجودی";
+          if(btn) btn.innerText = "🔄 دریافت آخرین دیتا از سرور";
           Swal.fire('خطا', 'مشکل در ارتباط با سرور.', 'error');
         });
     }
@@ -137,7 +138,7 @@
     }
 
     // ==========================================
-    // ۳. نمایش نتایج (بروزرسانی شده برای چند کالا)
+    // ۳. نمایش نتایج (اضافه شدن جانمایی)
     // ==========================================
     function showResult(matchedProducts, searchedText = null) {
       const resultDiv = document.getElementById("result");
@@ -145,7 +146,6 @@
 
       let html = "";
       
-      // نمایش عبارت جستجو شده
       if (searchedText) {
         html += `<div class="mb-3 text-gray-500 text-xs">🔍 جستجو برای: <span class="font-bold text-gray-800">${searchedText}</span></div>`;
       }
@@ -154,18 +154,24 @@
         playSuccessFeedback();
         resultDiv.classList.add("bg-gray-50", "border-gray-300");
         
-        // تیتر تعداد نتایج
         html += `<div class="mb-4 text-green-600 font-bold text-lg">✅ ${matchedProducts.length} کالا یافت شد:</div>`;
         
-        // ایجاد لیست کالاها
         html += `<div class="space-y-3">`;
         matchedProducts.forEach(product => {
           html += `
             <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
-              <div class="text-lg font-bold text-gray-800 mb-1 leading-tight">${product.name}</div>
-              <div class="text-sm text-gray-500 mb-3 font-mono">🔖 کد: ${product.barcode}</div>
+              <div class="text-lg font-bold text-gray-800 mb-2 leading-tight">${product.name}</div>
               
-              <div class="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100 mt-2">
+              <!-- بخش اطلاعات کد و جانمایی -->
+              <div class="flex flex-col gap-2 mb-3 pb-3 border-b border-gray-100">
+                <div class="text-sm text-gray-500 font-mono">🔖 کد: <span class="font-bold text-gray-700">${product.barcode}</span></div>
+                <div class="text-sm text-indigo-700 bg-indigo-50 px-2 py-1.5 rounded inline-flex items-center gap-1 w-fit">
+                  📍 جانمایی: <span class="font-bold">${product.location}</span>
+                </div>
+              </div>
+              
+              <!-- بخش موجودی -->
+              <div class="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100">
                 <span class="text-blue-800 font-semibold">📦 موجودی انبار:</span>
                 <span class="text-2xl font-black text-blue-600">${product.stock}</span>
               </div>
@@ -174,7 +180,6 @@
         });
         html += `</div>`;
       } else {
-        // حالت پیدا نشدن کالا
         resultDiv.classList.add("bg-red-50", "border-red-300", "text-red-900");
         html += `<div class="flex items-center gap-2 text-base font-bold"><span>❌</span> متاسفانه چیزی پیدا نشد.</div>`;
       }
@@ -183,7 +188,7 @@
     }
 
     // ==========================================
-    // ۴. جستجوی دستی (پشتیبانی از نتایج چندگانه)
+    // ۴. جستجوی دستی
     // ==========================================
     function searchManual() {
       let text = document.getElementById("manualInput").value.trim();
@@ -191,7 +196,6 @@
       
       text = toEnglishDigits(text);
       
-      // فیلتر کردن لیست (به جای پیدا کردن فقط اولین مورد)
       let matches = products.filter(p => 
         p.barcode.toUpperCase() === text.toUpperCase() || 
         p.name.includes(text)
@@ -201,7 +205,7 @@
     }
 
     // ==========================================
-    // ۵. مدیریت دوربین (ادغام شده)
+    // ۵. مدیریت دوربین
     // ==========================================
     let qrScanner = null;
 
@@ -212,13 +216,16 @@
       
       qrScanner.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } }, // تنظیم کادر مربعی برای پوشش بارکد و QR
+        { fps: 10, qrbox: { width: 250, height: 250 } },
         (decodedText) => {
           decodedText = toEnglishDigits(decodedText.trim());
-          // جستجوی دقیق بارکد
           const matches = products.filter(p => p.barcode.toUpperCase() === decodedText.toUpperCase());
+          
+          // قرار دادن متن اسکن شده در کادر جستجو برای راحتی کاربر
+          document.getElementById("manualInput").value = decodedText;
+          
           showResult(matches, decodedText);
-          stopScanner(); // بستن خودکار دوربین پس از موفقیت
+          stopScanner();
         },
         (err) => {}
       ).catch(err => {
