@@ -85,7 +85,7 @@
       const btn = document.getElementById("refreshBtn");
       if(btn) btn.innerText = "⏳ در حال دریافت اطلاعات...";
 
-      fetch(GOOGLE_SHEET_CSV_URL)
+      fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(GOOGLE_SHEET_CSV_URL))
         .then(response => response.text())
         .then(csvText => {
           Papa.parse(csvText, {
