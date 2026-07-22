@@ -11,14 +11,13 @@
   <!-- SweetAlert2 برای پیام‌های هشدار و موفقیت زیبا -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-  <!-- کتابخانه‌های اسکن و پردازش -->
+  <!-- فقط از یک کتابخانه قدرتمند برای اسکن QR و بارکد استفاده می‌کنیم -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://unpkg.com/papaparse@5.3.2/papaparse.min.js"></script>
-  <script src="https://unpkg.com/quagga@0.12.1/dist/quagga.min.js"></script>
 
   <style>
     body { font-family: Tahoma, Arial, sans-serif; }
-    #reader video, #camera video { border-radius: 12px; width: 100%; max-height: 300px; object-fit: cover; }
+    #reader video { border-radius: 12px; width: 100%; max-height: 300px; object-fit: cover; }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800 flex justify-center min-h-screen p-4 md:p-8">
@@ -31,29 +30,25 @@
       <p class="text-gray-500 text-sm">جستجو، اسکن و مدیریت موجودی انبار</p>
     </div>
 
-    <!-- دکمه‌های کنترل دوربین -->
+    <!-- دکمه‌های کنترل دوربین (ادغام شده) -->
     <div class="flex gap-2 justify-center">
-      <button onclick="startQR()" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-xl transition shadow text-sm font-medium">
-        اسکن QR
+      <button onclick="startScanner()" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-xl transition shadow text-sm font-bold flex justify-center items-center gap-2">
+        📷 اسکن بارکد / QR
       </button>
-      <button onclick="startBarcode()" class="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-2.5 rounded-xl transition shadow text-sm font-medium">
-        اسکن بارکد
-      </button>
-      <button onclick="stopScanners()" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-xl transition shadow text-sm font-medium">
-        توقف دوربین
+      <button onclick="stopScanner()" class="bg-red-500 hover:bg-red-600 text-white px-5 py-3 rounded-xl transition shadow text-sm font-bold">
+        توقف
       </button>
     </div>
 
-    <!-- فریم‌های نمایش دوربین -->
-    <div id="reader" class="hidden border-2 border-dashed border-gray-300 rounded-xl p-2 bg-gray-50"></div>
-    <div id="camera" class="hidden border-2 border-dashed border-gray-300 rounded-xl p-2 bg-gray-50"></div>
+    <!-- فریم نمایش دوربین -->
+    <div id="reader" class="hidden border-2 border-dashed border-blue-300 rounded-xl p-2 bg-blue-50"></div>
 
     <!-- بخش جستجوی دستی -->
     <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
-      <label class="block text-sm text-gray-700 mb-2 font-medium">جستجوی دستی:</label>
+      <label class="block text-sm text-gray-700 mb-2 font-medium">جستجوی دستی (نام یا کد):</label>
       <div class="flex gap-2">
-        <input type="text" id="manualInput" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 outline-none transition" placeholder="کد یا نام کالا...">
-        <button onclick="searchManual()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-sm transition shadow">
+        <input type="text" id="manualInput" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 outline-none transition" placeholder="مثلاً: مته خزینه...">
+        <button onclick="searchManual()" class="bg-gray-800 hover:bg-gray-900 text-white px-5 py-2 rounded-lg text-sm transition shadow font-bold">
           جستجو 🔍
         </button>
       </div>
@@ -61,11 +56,10 @@
 
     <!-- بخش اتصال به گوگل شیت (ابری) -->
     <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 text-center">
-      <p class="text-sm text-gray-700 mb-3 font-medium">☁️ اتصال به سرور ابری برقرار است</p>
       <button onclick="fetchData()" id="refreshBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition shadow w-full font-bold">
-        🔄 دریافت آخرین موجودی
+        🔄 دریافت آخرین موجودی از سرور
       </button>
-      <p class="text-xs text-gray-400 mt-2">موجودی به محض باز شدن برنامه به‌صورت خودکار آپدیت می‌شود.</p>
+      <p class="text-xs text-gray-400 mt-2">اتصال به اینترنت برای آپدیت الزامی است.</p>
     </div>
 
     <!-- کادر نمایش نتیجه -->
@@ -74,16 +68,16 @@
   </div>
 
   <script>
-    // --- ۱. آدرس فایل گوگل شیت شما ---
-    // لینک CSV که از گوگل شیت کپی کردید را دقیقاً بین دو کوتیشن زیر قرار دهید:
-    const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQMuYI529qvGmpXFevG7jZRChAjwxaqaFJJe-1dn3oy95WU5GWzZKrQxp9dr2o7U0ECL9niUEWx79f2/pub?output=csv";
+    // ==========================================
+    // ۱. تنظیمات دیتابیس ابری
+    // ==========================================
+    const GOOGLE_SHEET_CSV_URL = "لینک_گوگل_شیت_خود_را_اینجا_قرار_دهید";
 
     let products = [];
 
-    // --- ۲. دریافت خودکار داده‌ها از سرور گوگل ---
     function fetchData() {
       const btn = document.getElementById("refreshBtn");
-      if(btn) btn.innerText = "⏳ در حال دریافت اطلاعات...";
+      if(btn) btn.innerText = "⏳ در حال دریافت...";
 
       fetch(GOOGLE_SHEET_CSV_URL)
         .then(response => response.text())
@@ -91,12 +85,11 @@
           Papa.parse(csvText, {
             header: true,
             skipEmptyLines: true,
-            // این تابع جدید تمام حروف بزرگ و کاراکترهای مخفی تیترها را اصلاح می‌کند
             transformHeader: function(header) {
               return header.replace(/^\uFEFF/, '').trim().toLowerCase();
             },
             complete: function(results) {
-              products = []; // پاک کردن دیتای قدیمی
+              products = [];
               results.data.forEach(row => {
                 if (row.barcode && row.name && row.stock !== undefined) {
                   products.push({
@@ -109,19 +102,14 @@
 
               if(btn) btn.innerText = "🔄 دریافت آخرین موجودی";
               
-              // بررسی می‌کنیم که آیا کالایی واقعاً به لیست اضافه شد یا نه؟
               if(products.length === 0) {
-                 Swal.fire({
-                   icon: 'warning',
-                   title: 'لیست خالی است!',
-                   text: 'فایل دریافت شد اما کالایی پیدا نشد. لطفاً چک کنید تیتر ستون‌ها دقیقا barcode و name و stock باشند.'
-                 });
+                 Swal.fire('لیست خالی!', 'فایل خوانده شد اما کالایی پیدا نشد.', 'warning');
               } else {
                  Swal.fire({
                    icon: 'success',
                    title: 'بروزرسانی موفق',
-                   text: `${products.length} کالا با موفقیت دریافت و ذخیره شد.`,
-                   timer: 2500,
+                   text: `${products.length} کالا با موفقیت دریافت شد.`,
+                   timer: 2000,
                    showConfirmButton: false
                  });
               }
@@ -130,14 +118,15 @@
         })
         .catch(error => {
           if(btn) btn.innerText = "🔄 دریافت آخرین موجودی";
-          Swal.fire('خطا در اتصال', 'لطفاً اینترنت گوشی را بررسی کنید.', 'error');
+          Swal.fire('خطا', 'مشکل در ارتباط با سرور.', 'error');
         });
     }
 
-    // فراخوانی خودکار این تابع به محض باز شدن برنامه در گوشی
     window.onload = fetchData;
 
-    // --- ۳. توابع کمکی ---
+    // ==========================================
+    // ۲. توابع کمکی
+    // ==========================================
     function toEnglishDigits(str) {
       if(!str) return "";
       return str.replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
@@ -147,114 +136,102 @@
       if (navigator.vibrate) navigator.vibrate(200); 
     }
 
-    // --- ۴. نمایش رابط کاربری نتیجه ---
-    function showResult(product, scannedCode = null) {
+    // ==========================================
+    // ۳. نمایش نتایج (بروزرسانی شده برای چند کالا)
+    // ==========================================
+    function showResult(matchedProducts, searchedText = null) {
       const resultDiv = document.getElementById("result");
-      resultDiv.classList.remove("hidden", "bg-green-50", "border-green-300", "text-green-900", "bg-red-50", "border-red-300", "text-red-900");
+      resultDiv.classList.remove("hidden", "bg-gray-50", "border-gray-300", "bg-red-50", "border-red-300", "text-red-900");
 
       let html = "";
-      if (scannedCode) {
-        html += `<div class="mb-3 text-gray-500 text-xs">🔍 کد جستجو شده: <span class="font-bold text-gray-800">${scannedCode}</span></div>`;
+      
+      // نمایش عبارت جستجو شده
+      if (searchedText) {
+        html += `<div class="mb-3 text-gray-500 text-xs">🔍 جستجو برای: <span class="font-bold text-gray-800">${searchedText}</span></div>`;
       }
 
-      if (product) {
+      if (matchedProducts && matchedProducts.length > 0) {
         playSuccessFeedback();
-        resultDiv.classList.add("bg-green-50", "border-green-300", "text-green-900");
-        html += `
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-xl">✅</span>
-            <span class="text-lg font-bold">${product.name}</span>
-          </div>
-          <div class="mt-3 p-3 bg-white rounded-lg border border-green-200 flex justify-between items-center shadow-sm">
-            <span class="text-gray-600">📦 موجودی فعلی:</span>
-            <span class="text-2xl font-black text-blue-600">${product.stock}</span>
-          </div>
-        `;
+        resultDiv.classList.add("bg-gray-50", "border-gray-300");
+        
+        // تیتر تعداد نتایج
+        html += `<div class="mb-4 text-green-600 font-bold text-lg">✅ ${matchedProducts.length} کالا یافت شد:</div>`;
+        
+        // ایجاد لیست کالاها
+        html += `<div class="space-y-3">`;
+        matchedProducts.forEach(product => {
+          html += `
+            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
+              <div class="text-lg font-bold text-gray-800 mb-1 leading-tight">${product.name}</div>
+              <div class="text-sm text-gray-500 mb-3 font-mono">🔖 کد: ${product.barcode}</div>
+              
+              <div class="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100 mt-2">
+                <span class="text-blue-800 font-semibold">📦 موجودی انبار:</span>
+                <span class="text-2xl font-black text-blue-600">${product.stock}</span>
+              </div>
+            </div>
+          `;
+        });
+        html += `</div>`;
       } else {
+        // حالت پیدا نشدن کالا
         resultDiv.classList.add("bg-red-50", "border-red-300", "text-red-900");
-        html += `<div class="flex items-center gap-2 text-base"><span>❌</span> این کالا در سیستم ثبت نشده است.</div>`;
+        html += `<div class="flex items-center gap-2 text-base font-bold"><span>❌</span> متاسفانه چیزی پیدا نشد.</div>`;
       }
 
       resultDiv.innerHTML = html;
     }
 
-    // جستجوی متنی (ارتقا یافته برای نادیده گرفتن حروف بزرگ و کوچک)
+    // ==========================================
+    // ۴. جستجوی دستی (پشتیبانی از نتایج چندگانه)
+    // ==========================================
     function searchManual() {
       let text = document.getElementById("manualInput").value.trim();
       if(!text) return;
       
       text = toEnglishDigits(text);
-      // جستجو بدون حساسیت به حروف بزرگ و کوچک انجام می‌شود
-      let product = products.find(p => p.barcode.toUpperCase() === text.toUpperCase() || p.name.includes(text));
-      showResult(product, text);
-    }
-
-    // جستجوی متنی
-    function searchManual() {
-      let text = document.getElementById("manualInput").value.trim();
-      if(!text) return;
       
-      text = toEnglishDigits(text);
-      let product = products.find(p => p.barcode === text || p.name.includes(text));
-      showResult(product, text);
+      // فیلتر کردن لیست (به جای پیدا کردن فقط اولین مورد)
+      let matches = products.filter(p => 
+        p.barcode.toUpperCase() === text.toUpperCase() || 
+        p.name.includes(text)
+      );
+      
+      showResult(matches, text);
     }
 
-    // --- ۵. توابع اسکنر (QR و Barcode) ---
+    // ==========================================
+    // ۵. مدیریت دوربین (ادغام شده)
+    // ==========================================
     let qrScanner = null;
 
-    function startQR() {
-      stopScanners();
+    function startScanner() {
+      stopScanner();
       document.getElementById("reader").classList.remove("hidden");
       qrScanner = new Html5Qrcode("reader");
+      
       qrScanner.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
+        { fps: 10, qrbox: { width: 250, height: 250 } }, // تنظیم کادر مربعی برای پوشش بارکد و QR
         (decodedText) => {
           decodedText = toEnglishDigits(decodedText.trim());
-          const product = products.find(p => p.barcode.toUpperCase() === decodedText.toUpperCase());
-          showResult(product, decodedText);
-          stopScanners();
+          // جستجوی دقیق بارکد
+          const matches = products.filter(p => p.barcode.toUpperCase() === decodedText.toUpperCase());
+          showResult(matches, decodedText);
+          stopScanner(); // بستن خودکار دوربین پس از موفقیت
         },
         (err) => {}
       ).catch(err => {
-        Swal.fire('خطا', 'دوربین در دسترس نیست یا مجوز داده نشده.', 'error');
+        Swal.fire('خطا', 'دوربین در دسترس نیست.', 'error');
       });
     }
 
-    function startBarcode() {
-      stopScanners();
-      document.getElementById("camera").classList.remove("hidden");
-      Quagga.init({
-        inputStream: {
-          type: "LiveStream",
-          target: document.querySelector('#camera'),
-          constraints: { facingMode: "environment" }
-        },
-        decoder: { readers: ["code_128_reader", "code_39_reader", "ean_reader", "upc_reader"] }
-      }, function(err) {
-        if (err) {
-          Swal.fire('خطا', 'دوربین در دسترس نیست.', 'error');
-          return;
-        }
-        Quagga.start();
-      });
-
-      Quagga.onDetected(function(result) {
-        const code = toEnglishDigits(result.codeResult.code.trim());
-        const product = products.find(p => p.barcode.toUpperCase() === code.toUpperCase());
-        showResult(product, code);
-        stopScanners();
-      });
-    }
-
-    function stopScanners() {
+    function stopScanner() {
       document.getElementById("reader").classList.add("hidden");
-      document.getElementById("camera").classList.add("hidden");
       if (qrScanner) {
         qrScanner.stop().catch(e => {});
         qrScanner = null;
       }
-      try { Quagga.stop(); } catch(e){}
     }
   </script>
 </body>
