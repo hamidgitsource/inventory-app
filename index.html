@@ -58,7 +58,13 @@
       <button onclick="fetchData()" id="refreshBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition shadow w-full font-bold">
         🔄 دریافت آخرین دیتا از سرور
       </button>
-      <p class="text-xs text-gray-400 mt-2">اتصال به اینترنت برای آپدیت الزامی است.</p>
+      
+      <!-- نمایش تاریخ و ساعت آخرین آپدیت -->
+      <div id="lastUpdateContainer" class="hidden mt-3 p-2 bg-green-50 rounded-lg border border-green-200">
+        <p class="text-xs text-green-800 font-bold" id="lastUpdateText"></p>
+      </div>
+      
+      <p class="text-[10px] text-gray-400 mt-2">اتصال به اینترنت برای آپدیت الزامی است.</p>
     </div>
 
     <!-- کادر نمایش نتیجه -->
@@ -95,7 +101,6 @@
                     barcode: toEnglishDigits(String(row.barcode).trim()),
                     name: String(row.name).trim(),
                     stock: parseInt(toEnglishDigits(String(row.stock).trim())) || 0,
-                    // اضافه شدن جانمایی (اگر خالی بود مینویسد ثبت نشده)
                     location: row.location && String(row.location).trim() !== "" ? String(row.location).trim() : "ثبت نشده"
                   });
                 }
@@ -103,14 +108,26 @@
 
               if(btn) btn.innerText = "🔄 دریافت آخرین دیتا از سرور";
               
+              // ثبت تاریخ و ساعت شمسی
+              const now = new Date();
+              const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+              const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+              const persianDate = now.toLocaleDateString('fa-IR', dateOptions);
+              const persianTime = now.toLocaleTimeString('fa-IR', timeOptions);
+              
+              const updateContainer = document.getElementById("lastUpdateContainer");
+              const updateText = document.getElementById("lastUpdateText");
+              updateContainer.classList.remove("hidden");
+              updateText.innerHTML = `🕒 آخرین همگام‌سازی: ${persianDate} - ساعت ${persianTime}`;
+              
               if(products.length === 0) {
                  Swal.fire('لیست خالی!', 'فایل خوانده شد اما کالایی پیدا نشد.', 'warning');
               } else {
                  Swal.fire({
                    icon: 'success',
                    title: 'بروزرسانی موفق',
-                   text: `${products.length} کالا (همراه با جانمایی) دریافت شد.`,
-                   timer: 2000,
+                   text: `${products.length} کالا با موفقیت دریافت شد.`,
+                   timer: 1500,
                    showConfirmButton: false
                  });
               }
@@ -119,7 +136,7 @@
         })
         .catch(error => {
           if(btn) btn.innerText = "🔄 دریافت آخرین دیتا از سرور";
-          Swal.fire('خطا', 'مشکل در ارتباط با سرور.', 'error');
+          Swal.fire('خطا', 'مشکل در ارتباط با سرور. اینترنت خود را بررسی کنید.', 'error');
         });
     }
 
@@ -138,7 +155,7 @@
     }
 
     // ==========================================
-    // ۳. نمایش نتایج (اضافه شدن جانمایی)
+    // ۳. نمایش نتایج
     // ==========================================
     function showResult(matchedProducts, searchedText = null) {
       const resultDiv = document.getElementById("result");
@@ -162,7 +179,6 @@
             <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
               <div class="text-lg font-bold text-gray-800 mb-2 leading-tight">${product.name}</div>
               
-              <!-- بخش اطلاعات کد و جانمایی -->
               <div class="flex flex-col gap-2 mb-3 pb-3 border-b border-gray-100">
                 <div class="text-sm text-gray-500 font-mono">🔖 کد: <span class="font-bold text-gray-700">${product.barcode}</span></div>
                 <div class="text-sm text-indigo-700 bg-indigo-50 px-2 py-1.5 rounded inline-flex items-center gap-1 w-fit">
@@ -170,7 +186,6 @@
                 </div>
               </div>
               
-              <!-- بخش موجودی -->
               <div class="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100">
                 <span class="text-blue-800 font-semibold">📦 موجودی انبار:</span>
                 <span class="text-2xl font-black text-blue-600">${product.stock}</span>
@@ -221,9 +236,7 @@
           decodedText = toEnglishDigits(decodedText.trim());
           const matches = products.filter(p => p.barcode.toUpperCase() === decodedText.toUpperCase());
           
-          // قرار دادن متن اسکن شده در کادر جستجو برای راحتی کاربر
           document.getElementById("manualInput").value = decodedText;
-          
           showResult(matches, decodedText);
           stopScanner();
         },
