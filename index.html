@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>📦 سیستم هوشمند جانمایی کالا</title>
 
-  <!-- Tailwind CSS برای استایل‌دهی سریع و مدرن -->
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- SweetAlert2 برای پیام‌های هشدار و موفقیت زیبا -->
+  <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
   <script src="https://unpkg.com/html5-qrcode"></script>
@@ -59,12 +59,9 @@
         🔄 دریافت آخرین دیتا از سرور
       </button>
       
-      <!-- نمایش تاریخ و ساعت آخرین آپدیت واقعی فایل گوگل شیت -->
-      <div id="lastUpdateContainer" class="hidden mt-3 p-2.5 bg-blue-50 rounded-lg border border-blue-200 text-right">
-        <p class="text-xs text-blue-900 font-bold flex items-center gap-1 mb-1">
-          📊 آخرین تغییرات در گوگل شیت:
-        </p>
-        <p class="text-xs text-blue-700 font-medium" id="lastUpdateText"></p>
+      <!-- نمایش تاریخ واقعی آپدیت دیتابیس -->
+      <div id="lastUpdateContainer" class="hidden mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+        <p class="text-xs text-amber-800 font-medium" id="lastUpdateText"></p>
       </div>
       
       <p class="text-[10px] text-gray-400 mt-2">اتصال به اینترنت برای آپدیت الزامی است.</p>
@@ -88,28 +85,7 @@
       if(btn) btn.innerText = "⏳ در حال دریافت...";
 
       fetch(GOOGLE_SHEET_CSV_URL)
-        .then(response => {
-          // ۱. دریافت تاریخ آخرین ویرایش فایل در گوگل شیت از هدر سرور
-          const lastModifiedHeader = response.headers.get("last-modified");
-          
-          if (lastModifiedHeader) {
-            const modifiedDate = new Date(lastModifiedHeader);
-            
-            // تبدیل به تاریخ و ساعت شمسی
-            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
-            const timeOptions = { hour: '2-digit', minute: '2-digit' };
-            
-            const persianDate = modifiedDate.toLocaleDateString('fa-IR', dateOptions);
-            const persianTime = modifiedDate.toLocaleTimeString('fa-IR', timeOptions);
-
-            const updateContainer = document.getElementById("lastUpdateContainer");
-            const updateText = document.getElementById("lastUpdateText");
-            updateContainer.classList.remove("hidden");
-            updateText.innerText = `${persianDate} - ساعت ${persianTime}`;
-          }
-
-          return response.text();
-        })
+        .then(response => response.text())
         .then(csvText => {
           Papa.parse(csvText, {
             header: true,
@@ -119,7 +95,14 @@
             },
             complete: function(results) {
               products = [];
-              results.data.forEach(row => {
+              let sheetLastUpdate = "ثبت نشده در شیت"; // مقدار پیش‌فرض
+
+              results.data.forEach((row, index) => {
+                // دریافت تاریخ از ردیف اول شیت (اگر ستون last_update وجود داشته باشد)
+                if (index === 0 && row.last_update && String(row.last_update).trim() !== "") {
+                  sheetLastUpdate = String(row.last_update).trim();
+                }
+
                 if (row.barcode && row.name && row.stock !== undefined) {
                   products.push({
                     barcode: toEnglishDigits(String(row.barcode).trim()),
@@ -132,13 +115,19 @@
 
               if(btn) btn.innerText = "🔄 دریافت آخرین دیتا از سرور";
               
+              // نمایش تاریخ استخراج شده از شیت به کاربر
+              const updateContainer = document.getElementById("lastUpdateContainer");
+              const updateText = document.getElementById("lastUpdateText");
+              updateContainer.classList.remove("hidden");
+              updateText.innerHTML = `🕒 آخرین آپدیت موجودی سرور:<br><strong class="block mt-1 text-amber-900 text-sm dir-ltr">${sheetLastUpdate}</strong>`;
+              
               if(products.length === 0) {
                  Swal.fire('لیست خالی!', 'فایل خوانده شد اما کالایی پیدا نشد.', 'warning');
               } else {
                  Swal.fire({
                    icon: 'success',
                    title: 'بروزرسانی موفق',
-                   text: `${products.length} کالا با موفقیت دریافت شد.`,
+                   text: `دیتا با موفقیت دریافت شد.`,
                    timer: 1500,
                    showConfirmButton: false
                  });
@@ -155,7 +144,7 @@
     window.onload = fetchData;
 
     // ==========================================
-    // ۲. توابع کمکی
+    // توابع کمکی و دوربین کاملا مشابه قبل هستند
     // ==========================================
     function toEnglishDigits(str) {
       if(!str) return "";
@@ -166,9 +155,6 @@
       if (navigator.vibrate) navigator.vibrate(200); 
     }
 
-    // ==========================================
-    // ۳. نمایش نتایج
-    // ==========================================
     function showResult(matchedProducts, searchedText = null) {
       const resultDiv = document.getElementById("result");
       resultDiv.classList.remove("hidden", "bg-gray-50", "border-gray-300", "bg-red-50", "border-red-300", "text-red-900");
@@ -214,9 +200,6 @@
       resultDiv.innerHTML = html;
     }
 
-    // ==========================================
-    // ۴. جستجوی دستی
-    // ==========================================
     function searchManual() {
       let text = document.getElementById("manualInput").value.trim();
       if(!text) return;
@@ -231,11 +214,7 @@
       showResult(matches, text);
     }
 
-    // ==========================================
-    // ۵. مدیریت دوربین
-    // ==========================================
     let qrScanner = null;
-
     function startScanner() {
       stopScanner();
       document.getElementById("reader").classList.remove("hidden");
@@ -247,7 +226,6 @@
         (decodedText) => {
           decodedText = toEnglishDigits(decodedText.trim());
           const matches = products.filter(p => p.barcode.toUpperCase() === decodedText.toUpperCase());
-          
           document.getElementById("manualInput").value = decodedText;
           showResult(matches, decodedText);
           stopScanner();
