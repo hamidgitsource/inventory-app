@@ -85,33 +85,46 @@
       const btn = document.getElementById("refreshBtn");
       if(btn) btn.innerText = "⏳ در حال دریافت اطلاعات...";
 
-      fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(GOOGLE_SHEET_CSV_URL))
+      fetch(GOOGLE_SHEET_CSV_URL)
         .then(response => response.text())
         .then(csvText => {
           Papa.parse(csvText, {
             header: true,
             skipEmptyLines: true,
+            // این تابع جدید تمام حروف بزرگ و کاراکترهای مخفی تیترها را اصلاح می‌کند
+            transformHeader: function(header) {
+              return header.replace(/^\uFEFF/, '').trim().toLowerCase();
+            },
             complete: function(results) {
               products = []; // پاک کردن دیتای قدیمی
               results.data.forEach(row => {
-                if (row.barcode && row.name && row.stock) {
+                if (row.barcode && row.name && row.stock !== undefined) {
                   products.push({
                     barcode: toEnglishDigits(String(row.barcode).trim()),
                     name: String(row.name).trim(),
-                    stock: parseInt(toEnglishDigits(String(row.stock).trim()))
+                    stock: parseInt(toEnglishDigits(String(row.stock).trim())) || 0
                   });
                 }
               });
 
               if(btn) btn.innerText = "🔄 دریافت آخرین موجودی";
               
-              Swal.fire({
-                icon: 'success',
-                title: 'بروزرسانی موفق',
-                text: 'آخرین موجودی انبار دریافت شد.',
-                timer: 1500,
-                showConfirmButton: false
-              });
+              // بررسی می‌کنیم که آیا کالایی واقعاً به لیست اضافه شد یا نه؟
+              if(products.length === 0) {
+                 Swal.fire({
+                   icon: 'warning',
+                   title: 'لیست خالی است!',
+                   text: 'فایل دریافت شد اما کالایی پیدا نشد. لطفاً چک کنید تیتر ستون‌ها دقیقا barcode و name و stock باشند.'
+                 });
+              } else {
+                 Swal.fire({
+                   icon: 'success',
+                   title: 'بروزرسانی موفق',
+                   text: `${products.length} کالا با موفقیت دریافت و ذخیره شد.`,
+                   timer: 2500,
+                   showConfirmButton: false
+                 });
+              }
             }
           });
         })
@@ -126,6 +139,7 @@
 
     // --- ۳. توابع کمکی ---
     function toEnglishDigits(str) {
+      if(!str) return "";
       return str.replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
     }
 
@@ -162,6 +176,17 @@
       }
 
       resultDiv.innerHTML = html;
+    }
+
+    // جستجوی متنی (ارتقا یافته برای نادیده گرفتن حروف بزرگ و کوچک)
+    function searchManual() {
+      let text = document.getElementById("manualInput").value.trim();
+      if(!text) return;
+      
+      text = toEnglishDigits(text);
+      // جستجو بدون حساسیت به حروف بزرگ و کوچک انجام می‌شود
+      let product = products.find(p => p.barcode.toUpperCase() === text.toUpperCase() || p.name.includes(text));
+      showResult(product, text);
     }
 
     // جستجوی متنی
