@@ -59,9 +59,12 @@
         🔄 دریافت آخرین دیتا از سرور
       </button>
       
-      <!-- نمایش تاریخ و ساعت آخرین آپدیت -->
-      <div id="lastUpdateContainer" class="hidden mt-3 p-2 bg-green-50 rounded-lg border border-green-200">
-        <p class="text-xs text-green-800 font-bold" id="lastUpdateText"></p>
+      <!-- نمایش تاریخ و ساعت آخرین آپدیت واقعی فایل گوگل شیت -->
+      <div id="lastUpdateContainer" class="hidden mt-3 p-2.5 bg-blue-50 rounded-lg border border-blue-200 text-right">
+        <p class="text-xs text-blue-900 font-bold flex items-center gap-1 mb-1">
+          📊 آخرین تغییرات در گوگل شیت:
+        </p>
+        <p class="text-xs text-blue-700 font-medium" id="lastUpdateText"></p>
       </div>
       
       <p class="text-[10px] text-gray-400 mt-2">اتصال به اینترنت برای آپدیت الزامی است.</p>
@@ -85,7 +88,28 @@
       if(btn) btn.innerText = "⏳ در حال دریافت...";
 
       fetch(GOOGLE_SHEET_CSV_URL)
-        .then(response => response.text())
+        .then(response => {
+          // ۱. دریافت تاریخ آخرین ویرایش فایل در گوگل شیت از هدر سرور
+          const lastModifiedHeader = response.headers.get("last-modified");
+          
+          if (lastModifiedHeader) {
+            const modifiedDate = new Date(lastModifiedHeader);
+            
+            // تبدیل به تاریخ و ساعت شمسی
+            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit' };
+            
+            const persianDate = modifiedDate.toLocaleDateString('fa-IR', dateOptions);
+            const persianTime = modifiedDate.toLocaleTimeString('fa-IR', timeOptions);
+
+            const updateContainer = document.getElementById("lastUpdateContainer");
+            const updateText = document.getElementById("lastUpdateText");
+            updateContainer.classList.remove("hidden");
+            updateText.innerText = `${persianDate} - ساعت ${persianTime}`;
+          }
+
+          return response.text();
+        })
         .then(csvText => {
           Papa.parse(csvText, {
             header: true,
@@ -107,18 +131,6 @@
               });
 
               if(btn) btn.innerText = "🔄 دریافت آخرین دیتا از سرور";
-              
-              // ثبت تاریخ و ساعت شمسی
-              const now = new Date();
-              const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
-              const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
-              const persianDate = now.toLocaleDateString('fa-IR', dateOptions);
-              const persianTime = now.toLocaleTimeString('fa-IR', timeOptions);
-              
-              const updateContainer = document.getElementById("lastUpdateContainer");
-              const updateText = document.getElementById("lastUpdateText");
-              updateContainer.classList.remove("hidden");
-              updateText.innerHTML = `🕒 آخرین همگام‌سازی: ${persianDate} - ساعت ${persianTime}`;
               
               if(products.length === 0) {
                  Swal.fire('لیست خالی!', 'فایل خوانده شد اما کالایی پیدا نشد.', 'warning');
