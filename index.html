@@ -18,17 +18,21 @@
 
   <style>
     body { font-family: Tahoma, Arial, sans-serif; }
-    /* تنظیم ابعاد و نمایش فشرده ویدیو دوربین */
-    #reader video { border-radius: 12px; width: 100% !important; max-height: 220px !important; object-fit: cover; }
     #suggestionsList::-webkit-scrollbar { width: 6px; }
     #suggestionsList::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
     .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: bold; }
     .tab-inactive { color: #6b7280; border-bottom: 3px solid transparent; }
+    
+    /* شخصی‌سازی و محدود کردن اندازه دوربین */
+    #reader { border: none !important; margin: 0 auto; width: 100%; max-width: 250px; }
+    #reader video { border-radius: 12px; width: 100% !important; height: 250px !important; object-fit: cover; }
+    #reader__scan_region { background: transparent; }
+    #reader__dashboard_section_csr { display: none !important; }
   </style>
 </head>
-<body class="bg-gray-100 text-gray-800 flex justify-center min-h-screen p-4 md:p-8">
+<body class="bg-gray-100 text-gray-800 flex justify-center min-h-screen p-4 md:p-8 relative">
 
-  <div class="bg-white shadow-xl rounded-2xl w-full max-w-lg p-6 space-y-6 relative">
+  <div class="bg-white shadow-xl rounded-2xl w-full max-w-lg p-6 space-y-6 relative z-10">
     
     <!-- هدر نرم‌افزار -->
     <div class="text-center">
@@ -113,22 +117,25 @@
       </button>
 
     </div>
-
   </div>
 
   <!-- ========================================== -->
-  <!-- فریم جدید دوربین (به صورت پاپ‌آپ کوچک و جمع‌وجور) -->
+  <!-- پاپ آپ (Modal) دوربین اسکنر -->
   <!-- ========================================== -->
-  <div id="reader-container" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex justify-center items-center p-4 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl max-w-xs w-full p-4 space-y-3 shadow-2xl text-center border border-gray-100">
-       <div class="flex justify-between items-center border-b pb-2">
-         <h3 class="font-bold text-gray-700 text-sm flex items-center gap-1">📷 اسکن بارکد</h3>
-         <button onclick="stopScanner()" class="text-gray-400 hover:text-gray-600 font-bold text-lg">&times;</button>
-       </div>
-       <div id="reader" class="w-full rounded-xl overflow-hidden border-2 border-dashed border-blue-300 bg-black"></div>
-       <button onclick="stopScanner()" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-xl text-xs font-bold transition">
-         لغو و بازگشت
-       </button>
+  <div id="reader-container" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 z-50 flex justify-center items-center p-4 backdrop-blur-sm transition-opacity duration-300">
+    <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden p-5 flex flex-col items-center">
+      <h3 class="font-bold text-gray-800 text-lg mb-4">📷 اسکن بارکد</h3>
+      
+      <!-- قاب زیبای دوربین -->
+      <div class="w-full relative overflow-hidden rounded-2xl border-4 border-dashed border-blue-300 p-2 bg-blue-50">
+        <div id="reader"></div>
+      </div>
+      
+      <p class="text-xs text-gray-500 text-center mt-3 font-medium">بارکد را دقیقاً در مرکز کادر قرار دهید</p>
+      
+      <button onclick="stopScanner()" class="mt-5 w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl font-bold transition shadow">
+        لغو و بازگشت
+      </button>
     </div>
   </div>
 
@@ -393,16 +400,16 @@
         cancelButtonText: 'انصراف'
       }).then((result) => {
         if (result.isConfirmed) {
-          stocktakingRecords = [];
-          localStorage.removeItem('stocktakingData');
-          renderStocktakingList();
+          stocktakingRecords = []; 
+          localStorage.removeItem('stocktakingData'); 
+          renderStocktakingList(); 
           Swal.fire('پاک شد!', 'لیست شمارش‌ها با موفقیت خالی شد.', 'success');
         }
       });
     }
 
     // ==========================================
-    // خروجی اکسل (XLSX واقعی)
+    // خروجی اکسل
     // ==========================================
     function exportToExcel() {
       if(stocktakingRecords.length === 0) {
@@ -519,15 +526,6 @@
       resultDiv.innerHTML = html;
     }
 
-    function searchManual() {
-      let text = document.getElementById("manualInput").value.trim();
-      if(!text) return;
-      document.getElementById("suggestionsList").classList.add("hidden");
-      text = toEnglishDigits(text);
-      let matches = products.filter(p => p.barcode.toUpperCase().includes(text.toUpperCase()) || p.name.includes(text));
-      showResult(matches, text);
-    }
-
     let qrScanner = null;
     function startScanner(mode) {
       currentScannerMode = mode;
@@ -535,10 +533,9 @@
       document.getElementById("reader-container").classList.remove("hidden");
       qrScanner = new Html5Qrcode("reader");
       
-      // تنظیم ابعاد مربع هدف برای اسکن راحت‌تر و کوچک‌تر
       qrScanner.start(
         { facingMode: "environment" },
-        { fps: 15, qrbox: { width: 180, height: 180 } },
+        { fps: 10, qrbox: { width: 220, height: 220 } }, // سایز مربع اسکن کمی کوچک‌تر شد
         (decodedText) => {
           decodedText = toEnglishDigits(decodedText.trim());
           stopScanner();
