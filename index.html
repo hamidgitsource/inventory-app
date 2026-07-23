@@ -17,6 +17,9 @@
   <style>
     body { font-family: Tahoma, Arial, sans-serif; }
     #reader video { border-radius: 12px; width: 100%; max-height: 300px; object-fit: cover; }
+    /* استایل اختصاصی برای اسکرول‌بار لیست کشویی */
+    #suggestionsList::-webkit-scrollbar { width: 6px; }
+    #suggestionsList::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800 flex justify-center min-h-screen p-4 md:p-8">
@@ -42,11 +45,21 @@
     <!-- فریم نمایش دوربین -->
     <div id="reader" class="hidden border-2 border-dashed border-blue-300 rounded-xl p-2 bg-blue-50"></div>
 
-    <!-- بخش جستجوی دستی -->
+    <!-- بخش جستجوی دستی (تغییر یافته برای جستجوی زنده) -->
     <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
       <label class="block text-sm text-gray-700 mb-2 font-medium">جستجوی دستی (نام یا کد):</label>
       <div class="flex gap-2">
-        <input type="text" id="manualInput" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 outline-none transition" placeholder="مثلاً: مته خزینه...">
+        
+        <!-- کادر جستجو و لیست کشویی -->
+        <div class="relative flex-1">
+          <input type="text" id="manualInput" oninput="handleLiveSearch()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 outline-none transition" placeholder="مثلاً: مته خزینه..." autocomplete="off">
+          
+          <!-- لیست کشویی پیشنهادات -->
+          <ul id="suggestionsList" class="hidden absolute z-50 w-full bg-white border border-gray-200 shadow-xl max-h-48 rounded-lg overflow-y-auto mt-1 divide-y divide-gray-100">
+            <!-- آیتم‌ها توسط جاوااسکریپت اینجا قرار می‌گیرند -->
+          </ul>
+        </div>
+
         <button onclick="searchManual()" class="bg-gray-800 hover:bg-gray-900 text-white px-5 py-2 rounded-lg text-sm transition shadow font-bold">
           جستجو 🔍
         </button>
@@ -95,10 +108,9 @@
             },
             complete: function(results) {
               products = [];
-              let sheetLastUpdate = "ثبت نشده در شیت"; // مقدار پیش‌فرض
+              let sheetLastUpdate = "ثبت نشده در شیت"; 
 
               results.data.forEach((row, index) => {
-                // دریافت تاریخ از ردیف اول شیت (اگر ستون last_update وجود داشته باشد)
                 if (index === 0 && row.last_update && String(row.last_update).trim() !== "") {
                   sheetLastUpdate = String(row.last_update).trim();
                 }
@@ -115,11 +127,10 @@
 
               if(btn) btn.innerText = "🔄 دریافت آخرین دیتا از سرور";
               
-              // نمایش تاریخ استخراج شده از شیت به کاربر
               const updateContainer = document.getElementById("lastUpdateContainer");
               const updateText = document.getElementById("lastUpdateText");
               updateContainer.classList.remove("hidden");
-              updateText.innerHTML = `🕒 آخرین آپدیت موجودی سرور:<br><strong class="block mt-1 text-amber-900 text-sm dir-ltr">${sheetLastUpdate}</strong>`;
+              updateText.innerHTML = `🕒 آخرین آپدیت موجودی سرور:<br><strong class="block mt-1 text-blue-900 text-sm dir-ltr">${sheetLastUpdate}</strong>`;
               
               if(products.length === 0) {
                  Swal.fire('لیست خالی!', 'فایل خوانده شد اما کالایی پیدا نشد.', 'warning');
@@ -144,7 +155,7 @@
     window.onload = fetchData;
 
     // ==========================================
-    // توابع کمکی و دوربین کاملا مشابه قبل هستند
+    // ۲. توابع کمکی
     // ==========================================
     function toEnglishDigits(str) {
       if(!str) return "";
@@ -155,6 +166,73 @@
       if (navigator.vibrate) navigator.vibrate(200); 
     }
 
+    // بستن لیست کشویی وقتی بیرون از آن کلیک می‌شود
+    document.addEventListener('click', function(e) {
+      const input = document.getElementById('manualInput');
+      const list = document.getElementById('suggestionsList');
+      if (input && list && !input.contains(e.target) && !list.contains(e.target)) {
+        list.classList.add('hidden');
+      }
+    });
+
+    // ==========================================
+    // ۳. جستجوی زنده (Live Search) - جدید
+    // ==========================================
+    function handleLiveSearch() {
+      const inputText = document.getElementById("manualInput").value.trim();
+      const list = document.getElementById("suggestionsList");
+      
+      if (!inputText) {
+        list.classList.add("hidden");
+        return;
+      }
+
+      const text = toEnglishDigits(inputText);
+      const matches = products.filter(p => 
+        p.barcode.toUpperCase().includes(text.toUpperCase()) || 
+        p.name.includes(text)
+      );
+
+      if (matches.length === 0) {
+        list.classList.add("hidden");
+        return;
+      }
+
+      // ساخت آیتم‌های لیست کشویی
+      list.innerHTML = "";
+      matches.forEach(product => {
+        const li = document.createElement("li");
+        li.className = "px-4 py-3 hover:bg-blue-50 cursor-pointer transition flex justify-between items-center";
+        
+        // نام کالا
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "text-sm text-gray-800 font-medium truncate w-3/4";
+        nameSpan.innerText = product.name;
+        
+        // موجودی کوچک در کنار آن
+        const stockSpan = document.createElement("span");
+        stockSpan.className = "text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded font-bold";
+        stockSpan.innerText = product.stock;
+
+        li.appendChild(nameSpan);
+        li.appendChild(stockSpan);
+
+        // با کلیک روی آیتم، کالا انتخاب می‌شود
+        li.onclick = () => {
+          document.getElementById("manualInput").value = product.name;
+          list.classList.add("hidden");
+          showResult([product]); // نمایش اطلاعات فقط همین کالا
+        };
+
+        list.appendChild(li);
+      });
+
+      list.classList.remove("hidden");
+    }
+
+    // ==========================================
+    // ۴. نمایش نتایج
+    // ==========================================
     function showResult(matchedProducts, searchedText = null) {
       const resultDiv = document.getElementById("result");
       resultDiv.classList.remove("hidden", "bg-gray-50", "border-gray-300", "bg-red-50", "border-red-300", "text-red-900");
@@ -179,7 +257,7 @@
               
               <div class="flex flex-col gap-2 mb-3 pb-3 border-b border-gray-100">
                 <div class="text-sm text-gray-500 font-mono">🔖 کد: <span class="font-bold text-gray-700">${product.barcode}</span></div>
-                <div class="text-sm text-indigo-700 bg-indigo-50 px-2 py-1.5 rounded inline-flex items-center gap-1 w-fit">
+                <div class="text-sm text-blue-700 bg-blue-50 px-2 py-1.5 rounded inline-flex items-center gap-1 w-fit">
                   📍 جانمایی: <span class="font-bold">${product.location}</span>
                 </div>
               </div>
@@ -200,20 +278,28 @@
       resultDiv.innerHTML = html;
     }
 
+    // ==========================================
+    // ۵. جستجوی دستی (با زدن دکمه جستجو)
+    // ==========================================
     function searchManual() {
       let text = document.getElementById("manualInput").value.trim();
       if(!text) return;
       
+      // پنهان کردن کشویی هنگام کلیک روی دکمه جستجو
+      document.getElementById("suggestionsList").classList.add("hidden");
+
       text = toEnglishDigits(text);
-      
       let matches = products.filter(p => 
-        p.barcode.toUpperCase() === text.toUpperCase() || 
+        p.barcode.toUpperCase().includes(text.toUpperCase()) || 
         p.name.includes(text)
       );
       
       showResult(matches, text);
     }
 
+    // ==========================================
+    // ۶. مدیریت دوربین
+    // ==========================================
     let qrScanner = null;
     function startScanner() {
       stopScanner();
