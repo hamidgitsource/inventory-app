@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>📦 سیستم هوشمند جانمایی کالا</title>
+  <title>📦 سیستم هوشمند انبارداری و جانمایی</title>
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -19,69 +19,163 @@
     #reader video { border-radius: 12px; width: 100%; max-height: 300px; object-fit: cover; }
     #suggestionsList::-webkit-scrollbar { width: 6px; }
     #suggestionsList::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+    .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: bold; }
+    .tab-inactive { color: #6b7280; border-bottom: 3px solid transparent; }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800 flex justify-center min-h-screen p-4 md:p-8">
 
-  <div class="bg-white shadow-xl rounded-2xl w-full max-w-md p-6 space-y-6">
+  <div class="bg-white shadow-xl rounded-2xl w-full max-w-lg p-6 space-y-6 relative">
     
     <!-- هدر نرم‌افزار -->
     <div class="text-center">
-      <h2 class="text-2xl font-bold text-blue-600 mb-1">📦 سیستم جانمایی کالا</h2>
-      <p class="text-gray-500 text-sm">جستجو، اسکن و مدیریت موجودی انبار</p>
+      <h2 class="text-2xl font-bold text-blue-600 mb-1">📦 دستیار هوشمند انبار</h2>
     </div>
 
-    <!-- دکمه‌های کنترل دوربین -->
-    <div class="flex gap-2 justify-center">
-      <button onclick="startScanner()" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-xl transition shadow text-sm font-bold flex justify-center items-center gap-2">
-        📷 اسکن بارکد / QR
-      </button>
-      <button onclick="stopScanner()" class="bg-red-500 hover:bg-red-600 text-white px-5 py-3 rounded-xl transition shadow text-sm font-bold">
-        توقف
-      </button>
+    <!-- تب ها -->
+    <div class="flex border-b border-gray-200">
+      <button onclick="switchTab('location')" id="tab-btn-location" class="flex-1 pb-2 tab-active transition">📍 جانمایی کالا</button>
+      <button onclick="switchTab('stocktaking')" id="tab-btn-stocktaking" class="flex-1 pb-2 tab-inactive transition">📋 انبارگردانی</button>
     </div>
 
-    <!-- فریم نمایش دوربین -->
-    <div id="reader" class="hidden border-2 border-dashed border-blue-300 rounded-xl p-2 bg-blue-50"></div>
-
-    <!-- بخش جستجوی دستی -->
-    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
-      <label class="block text-sm text-gray-700 mb-2 font-medium">جستجوی دستی (نام یا کد):</label>
-      <div class="flex gap-2">
-        
-        <!-- کادر جستجو و لیست کشویی -->
-        <div class="relative flex-1">
-          <input type="text" id="manualInput" oninput="handleLiveSearch()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 outline-none transition" placeholder="مثلاً: مته خزینه..." autocomplete="off">
-          
-          <!-- لیست کشویی پیشنهادات -->
-          <ul id="suggestionsList" class="hidden absolute z-50 w-full bg-white border border-gray-200 shadow-xl max-h-60 rounded-lg overflow-y-auto mt-1 divide-y divide-gray-100">
-            <!-- آیتم‌ها توسط جاوااسکریپت اینجا قرار می‌گیرند -->
-          </ul>
-        </div>
-
-        <button onclick="searchManual()" class="bg-gray-800 hover:bg-gray-900 text-white px-5 py-2 rounded-lg text-sm transition shadow font-bold">
-          جستجو 🔍
+    <!-- ========================================== -->
+    <!-- تب ۱: جانمایی کالا -->
+    <!-- ========================================== -->
+    <div id="tab-location" class="space-y-6 block">
+      
+      <div class="flex gap-2 justify-center">
+        <button onclick="startScanner('location')" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-xl transition shadow text-sm font-bold flex justify-center items-center gap-2">
+          📷 اسکن بارکد
         </button>
       </div>
-    </div>
 
-    <!-- بخش اتصال به گوگل شیت -->
-    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 text-center">
-      <button onclick="fetchData()" id="refreshBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition shadow w-full font-bold">
-        🔄 دریافت آخرین دیتا از سرور
-      </button>
-      
-      <!-- نمایش تاریخ واقعی آپدیت دیتابیس با رنگ آبی -->
-      <div id="lastUpdateContainer" class="hidden mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-        <p class="text-xs text-blue-800 font-medium" id="lastUpdateText"></p>
+      <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+        <label class="block text-sm text-gray-700 mb-2 font-medium">جستجوی دستی (نام یا کد):</label>
+        <div class="flex gap-2">
+          <div class="relative flex-1">
+            <input type="text" id="manualInput" oninput="handleLiveSearch()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 outline-none transition" placeholder="مثلاً: مته..." autocomplete="off">
+            <ul id="suggestionsList" class="hidden absolute z-40 w-full bg-white border border-gray-200 shadow-xl max-h-60 rounded-lg overflow-y-auto mt-1 divide-y divide-gray-100"></ul>
+          </div>
+          <button onclick="searchManual()" class="bg-gray-800 hover:bg-gray-900 text-white px-5 py-2 rounded-lg text-sm transition shadow font-bold">جستجو</button>
+        </div>
       </div>
-      
-      <p class="text-[10px] text-gray-400 mt-2">اتصال به اینترنت برای آپدیت الزامی است.</p>
+
+      <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 text-center">
+        <button onclick="fetchData()" id="refreshBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition shadow w-full font-bold">
+          🔄 دریافت آخرین دیتا از سرور
+        </button>
+        <div id="lastUpdateContainer" class="hidden mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <p class="text-xs text-blue-800 font-medium" id="lastUpdateText"></p>
+        </div>
+      </div>
+
+      <div id="result" class="hidden rounded-xl p-4 text-sm font-medium leading-relaxed border transition-all duration-300"></div>
     </div>
 
-    <!-- کادر نمایش نتیجه -->
-    <div id="result" class="hidden rounded-xl p-4 text-sm font-medium leading-relaxed border transition-all duration-300"></div>
+    <!-- ========================================== -->
+    <!-- تب ۲: انبارگردانی -->
+    <!-- ========================================== -->
+    <div id="tab-stocktaking" class="space-y-6 hidden">
+      
+      <div class="flex gap-2 justify-center">
+        <button onclick="startScanner('stocktaking')" class="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-xl transition shadow text-sm font-bold flex justify-center items-center gap-2">
+          📷 اسکن برای ثبت شمارش
+        </button>
+        <button onclick="openStockModal()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-xl transition shadow text-sm font-bold">
+          ✍️ ثبت دستی
+        </button>
+      </div>
 
+      <!-- لیست موارد شمرده شده -->
+      <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
+        <div class="flex justify-between items-center mb-3 border-b pb-2">
+          <h3 class="font-bold text-gray-700 text-sm">لیست شمارش‌های امروز:</h3>
+          <span id="stockCountBadge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded">۰ ردیف</span>
+        </div>
+        
+        <div id="stocktakingList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+          <!-- ردیف های ثبت شده اینجا نمایش داده میشوند -->
+          <p class="text-xs text-gray-400 text-center py-4">هنوز کالایی شمرده نشده است.</p>
+        </div>
+      </div>
+
+      <button onclick="exportToExcel()" class="bg-emerald-500 hover:bg-emerald-600 text-white w-full py-3 rounded-xl transition shadow text-sm font-bold flex justify-center items-center gap-2">
+        📥 دانلود فایل اکسل (CSV)
+      </button>
+
+    </div>
+
+    <!-- فریم نمایش دوربین (مشترک بین دو تب) -->
+    <div id="reader-container" class="hidden absolute inset-0 bg-white z-30 p-4 rounded-2xl flex flex-col">
+       <h3 class="text-center font-bold text-gray-700 mb-2">در حال اسکن...</h3>
+       <div id="reader" class="border-2 border-dashed border-blue-300 rounded-xl p-2 bg-blue-50 flex-1"></div>
+       <button onclick="stopScanner()" class="mt-4 bg-red-500 text-white py-3 rounded-xl font-bold">لغو و بازگشت</button>
+    </div>
+
+  </div>
+
+  <!-- ========================================== -->
+  <!-- پاپ آپ (Modal) فرم تگ انبارگردانی -->
+  <!-- ========================================== -->
+  <div id="stockModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-70 z-50 flex justify-center items-center p-4 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      
+      <div class="bg-indigo-600 p-4 text-white flex justify-between items-center shrink-0">
+        <h3 class="font-bold text-lg">📝 تگ انبارگردانی</h3>
+        <button onclick="closeStockModal()" class="text-white hover:text-gray-200 text-xl font-bold">&times;</button>
+      </div>
+
+      <div class="p-5 space-y-4 overflow-y-auto flex-1">
+        
+        <!-- ردیف اول: کالا -->
+        <div class="space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
+          <div>
+            <label class="block text-xs text-gray-500 font-bold mb-1">کد کالا</label>
+            <input type="text" id="st_barcode" class="w-full border border-gray-300 rounded p-2 text-sm text-left dir-ltr focus:ring-2 focus:ring-indigo-400 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 font-bold mb-1">شرح کالا</label>
+            <input type="text" id="st_name" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-400 outline-none">
+          </div>
+        </div>
+
+        <!-- ردیف دوم: اطلاعات مکانی و شمارش -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-gray-500 font-bold mb-1">نام انبار</label>
+            <input type="text" id="st_warehouse" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-400 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 font-bold mb-1">شماره بخش</label>
+            <input type="text" id="st_section" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-400 outline-none">
+          </div>
+          <div class="col-span-2">
+            <label class="block text-xs text-indigo-600 font-bold mb-1">تعداد شمارش (موجودی واقعی)</label>
+            <input type="number" id="st_count" class="w-full border-2 border-indigo-300 rounded p-2 text-lg font-bold text-center focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+        </div>
+
+        <!-- ردیف سوم: اشخاص -->
+        <div class="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
+          <div>
+            <label class="block text-xs text-gray-500 font-bold mb-1">ثبت کننده</label>
+            <input type="text" id="st_registrar" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-400 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 font-bold mb-1">کنترل کننده</label>
+            <input type="text" id="st_controller" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-400 outline-none">
+          </div>
+        </div>
+
+      </div>
+
+      <div class="p-4 border-t bg-gray-50 shrink-0">
+        <button onclick="saveStockData()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow transition">
+          ✅ تایید و ثبت در لیست
+        </button>
+      </div>
+
+    </div>
   </div>
 
   <script>
@@ -91,6 +185,25 @@
     const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQMuYI529qvGmpXFevG7jZRChAjwxaqaFJJe-1dn3oy95WU5GWzZKrQxp9dr2o7U0ECL9niUEWx79f2/pub?output=csv";
 
     let products = [];
+    let stocktakingRecords = []; // آرایه برای ذخیره شمارش‌ها
+    let activeTab = 'location';
+    let currentScannerMode = 'location';
+
+    // بازیابی دیتای انبارگردانی قبلی از حافظه مرورگر
+    window.onload = () => {
+      fetchData();
+      const savedStock = localStorage.getItem('stocktakingData');
+      if(savedStock) {
+        stocktakingRecords = JSON.parse(savedStock);
+        renderStocktakingList();
+      }
+      
+      // بازیابی نام‌های پیش‌فرض اشخاص و مکان برای سرعت بیشتر
+      document.getElementById('st_warehouse').value = localStorage.getItem('st_last_warehouse') || '';
+      document.getElementById('st_section').value = localStorage.getItem('st_last_section') || '';
+      document.getElementById('st_registrar').value = localStorage.getItem('st_last_registrar') || '';
+      document.getElementById('st_controller').value = localStorage.getItem('st_last_controller') || '';
+    };
 
     function fetchData() {
       const btn = document.getElementById("refreshBtn");
@@ -113,7 +226,6 @@
                 if (index === 0 && row.last_update && String(row.last_update).trim() !== "") {
                   sheetLastUpdate = String(row.last_update).trim();
                 }
-
                 if (row.barcode && row.name && row.stock !== undefined) {
                   products.push({
                     barcode: toEnglishDigits(String(row.barcode).trim()),
@@ -125,36 +237,174 @@
               });
 
               if(btn) btn.innerText = "🔄 دریافت آخرین دیتا از سرور";
-              
               const updateContainer = document.getElementById("lastUpdateContainer");
               const updateText = document.getElementById("lastUpdateText");
               updateContainer.classList.remove("hidden");
               updateText.innerHTML = `🕒 آخرین آپدیت موجودی سرور:<br><strong class="block mt-1 text-blue-900 text-sm dir-ltr">${sheetLastUpdate}</strong>`;
-              
-              if(products.length === 0) {
-                 Swal.fire('لیست خالی!', 'فایل خوانده شد اما کالایی پیدا نشد.', 'warning');
-              } else {
-                 Swal.fire({
-                   icon: 'success',
-                   title: 'بروزرسانی موفق',
-                   text: `دیتا با موفقیت دریافت شد.`,
-                   timer: 1500,
-                   showConfirmButton: false
-                 });
-              }
             }
           });
         })
         .catch(error => {
           if(btn) btn.innerText = "🔄 دریافت آخرین دیتا از سرور";
-          Swal.fire('خطا', 'مشکل در ارتباط با سرور. اینترنت خود را بررسی کنید.', 'error');
         });
     }
 
-    window.onload = fetchData;
+    // ==========================================
+    // مدیریت تب‌ها
+    // ==========================================
+    function switchTab(tabName) {
+      activeTab = tabName;
+      document.getElementById('tab-location').classList.toggle('hidden', tabName !== 'location');
+      document.getElementById('tab-stocktaking').classList.toggle('hidden', tabName !== 'stocktaking');
+      
+      document.getElementById('tab-btn-location').className = tabName === 'location' ? 'flex-1 pb-2 tab-active transition' : 'flex-1 pb-2 tab-inactive transition';
+      document.getElementById('tab-btn-stocktaking').className = tabName === 'stocktaking' ? 'flex-1 pb-2 tab-active transition' : 'flex-1 pb-2 tab-inactive transition';
+    }
 
     // ==========================================
-    // ۲. توابع کمکی
+    // عملیات انبارگردانی
+    // ==========================================
+    function openStockModal(scannedBarcode = '') {
+      document.getElementById('st_barcode').value = scannedBarcode;
+      document.getElementById('st_name').value = '';
+      document.getElementById('st_count').value = '';
+      
+      // اگر بارکد اسکن شده بود، نامش را از دیتابیس پیدا کن
+      if(scannedBarcode) {
+        const foundProduct = products.find(p => p.barcode.toUpperCase() === scannedBarcode.toUpperCase());
+        if(foundProduct) {
+          document.getElementById('st_name').value = foundProduct.name;
+        } else {
+          // اگر در سیستم نبود
+          Swal.fire({
+            title: 'کالای جدید!',
+            text: 'این بارکد در سیستم ثبت نشده است. لطفاً شرح کالا را دستی وارد کنید.',
+            icon: 'info',
+            timer: 3000,
+            showConfirmButton: false
+          });
+        }
+      }
+
+      document.getElementById('stockModal').classList.remove('hidden');
+      
+      // فوکوس اتوماتیک روی فیلد تعداد
+      setTimeout(() => document.getElementById('st_count').focus(), 300);
+    }
+
+    function closeStockModal() {
+      document.getElementById('stockModal').classList.add('hidden');
+    }
+
+    function saveStockData() {
+      const barcode = document.getElementById('st_barcode').value.trim();
+      const name = document.getElementById('st_name').value.trim();
+      const warehouse = document.getElementById('st_warehouse').value.trim();
+      const section = document.getElementById('st_section').value.trim();
+      const count = document.getElementById('st_count').value.trim();
+      const registrar = document.getElementById('st_registrar').value.trim();
+      const controller = document.getElementById('st_controller').value.trim();
+
+      if(!barcode || !name || count === '') {
+        Swal.fire('خطا', 'کد کالا، شرح و تعداد شمارش الزامی است!', 'error');
+        return;
+      }
+
+      // ذخیره مقادیر تکراری برای استفاده در دفعات بعد (سرعت بیشتر کاربر)
+      localStorage.setItem('st_last_warehouse', warehouse);
+      localStorage.setItem('st_last_section', section);
+      localStorage.setItem('st_last_registrar', registrar);
+      localStorage.setItem('st_last_controller', controller);
+
+      const record = { barcode, name, warehouse, section, count, registrar, controller, time: new Date().toLocaleTimeString('fa-IR') };
+      
+      // اضافه کردن به ابتدای آرایه
+      stocktakingRecords.unshift(record);
+      
+      // ذخیره در حافظه پنهان مرورگر
+      localStorage.setItem('stocktakingData', JSON.stringify(stocktakingRecords));
+
+      renderStocktakingList();
+      closeStockModal();
+      playSuccessFeedback();
+    }
+
+    function renderStocktakingList() {
+      const listDiv = document.getElementById('stocktakingList');
+      const badge = document.getElementById('stockCountBadge');
+      
+      badge.innerText = `${stocktakingRecords.length} ردیف`;
+
+      if(stocktakingRecords.length === 0) {
+        listDiv.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">هنوز کالایی شمرده نشده است.</p>';
+        return;
+      }
+
+      let html = '';
+      stocktakingRecords.forEach((item, index) => {
+        html += `
+          <div class="bg-white p-3 rounded border border-gray-200 shadow-sm flex justify-between items-center">
+            <div class="overflow-hidden pr-2">
+              <div class="text-sm font-bold text-gray-800 truncate">${item.name}</div>
+              <div class="text-xs text-gray-500 font-mono mt-1">${item.barcode} | ${item.warehouse} - ${item.section}</div>
+            </div>
+            <div class="bg-indigo-100 text-indigo-800 font-black px-3 py-2 rounded-lg text-lg shrink-0">
+              ${item.count}
+            </div>
+            <button onclick="deleteStockRecord(${index})" class="ml-2 text-red-500 hover:bg-red-50 p-2 rounded shrink-0">🗑️</button>
+          </div>
+        `;
+      });
+      listDiv.innerHTML = html;
+    }
+
+    function deleteStockRecord(index) {
+      if(confirm('آیا از حذف این رکورد مطمئن هستید؟')) {
+        stocktakingRecords.splice(index, 1);
+        localStorage.setItem('stocktakingData', JSON.stringify(stocktakingRecords));
+        renderStocktakingList();
+      }
+    }
+
+    // ==========================================
+    // خروجی اکسل
+    // ==========================================
+    function exportToExcel() {
+      if(stocktakingRecords.length === 0) {
+        Swal.fire('لیست خالی است', 'هیچ دیتایی برای خروجی گرفتن وجود ندارد.', 'warning');
+        return;
+      }
+
+      // افزودن BOM برای پشتیبانی از حروف فارسی در اکسل
+      let csvContent = "\uFEFF"; 
+      
+      // هدر فایل اکسل
+      csvContent += "کد کالا,شرح کالا,نام انبار,شماره بخش,تعداد شمارش,ثبت کننده,کنترل کننده,زمان ثبت\n";
+      
+      // داده ها
+      stocktakingRecords.forEach(row => {
+        // برای جلوگیری از بهم ریختگی اگر در نام کالا کاما وجود داشت
+        let safeName = row.name.replace(/,/g, " "); 
+        csvContent += `${row.barcode},${safeName},${row.warehouse},${row.section},${row.count},${row.registrar},${row.controller},${row.time}\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      
+      // نام فایل همراه با تاریخ روز
+      const dateStr = new Date().toLocaleDateString('fa-IR').replace(/\//g, '-');
+      link.setAttribute("download", `Stocktaking_${dateStr}.csv`);
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+
+    // ==========================================
+    // توابع کمکی و جستجو و دوربین
     // ==========================================
     function toEnglishDigits(str) {
       if(!str) return "";
@@ -165,6 +415,7 @@
       if (navigator.vibrate) navigator.vibrate(200); 
     }
 
+    // جستجوی زنده (مشابه قبل)
     document.addEventListener('click', function(e) {
       const input = document.getElementById('manualInput');
       const list = document.getElementById('suggestionsList');
@@ -173,133 +424,81 @@
       }
     });
 
-    // ==========================================
-    // ۳. جستجوی زنده (اصلاح شده برای نام‌های طولانی)
-    // ==========================================
     function handleLiveSearch() {
       const inputText = document.getElementById("manualInput").value.trim();
       const list = document.getElementById("suggestionsList");
-      
-      if (!inputText) {
-        list.classList.add("hidden");
-        return;
-      }
-
+      if (!inputText) { list.classList.add("hidden"); return; }
       const text = toEnglishDigits(inputText);
-      const matches = products.filter(p => 
-        p.barcode.toUpperCase().includes(text.toUpperCase()) || 
-        p.name.includes(text)
-      );
-
-      if (matches.length === 0) {
-        list.classList.add("hidden");
-        return;
-      }
-
+      const matches = products.filter(p => p.barcode.toUpperCase().includes(text.toUpperCase()) || p.name.includes(text));
+      if (matches.length === 0) { list.classList.add("hidden"); return; }
       list.innerHTML = "";
       matches.forEach(product => {
         const li = document.createElement("li");
-        // تغییرات: استفاده از items-start به جای items-center تا در صورت دو خطی شدن نام کالا، ظاهر به هم نریزد
         li.className = "px-4 py-3 hover:bg-blue-50 cursor-pointer transition flex justify-between items-start gap-3";
-        
-        // تغییرات: حذف truncate (سه‌نقطه) و استفاده از flex-1 و break-words برای شکستن خط
         const nameSpan = document.createElement("span");
         nameSpan.className = "text-sm text-gray-800 font-medium leading-relaxed flex-1 break-words";
         nameSpan.innerText = product.name;
-        
-        // تغییرات: اضافه کردن shrink-0 تا با طولانی شدن نام، باکس موجودی فشرده نشود
         const stockSpan = document.createElement("span");
         stockSpan.className = "text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded font-bold shrink-0 mt-0.5";
         stockSpan.innerText = product.stock;
-
-        li.appendChild(nameSpan);
-        li.appendChild(stockSpan);
-
+        li.appendChild(nameSpan); li.appendChild(stockSpan);
         li.onclick = () => {
           document.getElementById("manualInput").value = product.name;
           list.classList.add("hidden");
           showResult([product]);
         };
-
         list.appendChild(li);
       });
-
       list.classList.remove("hidden");
     }
 
-    // ==========================================
-    // ۴. نمایش نتایج
-    // ==========================================
     function showResult(matchedProducts, searchedText = null) {
       const resultDiv = document.getElementById("result");
       resultDiv.classList.remove("hidden", "bg-gray-50", "border-gray-300", "bg-red-50", "border-red-300", "text-red-900");
-
       let html = "";
-      
-      if (searchedText) {
-        html += `<div class="mb-3 text-gray-500 text-xs">🔍 جستجو برای: <span class="font-bold text-gray-800">${searchedText}</span></div>`;
-      }
-
+      if (searchedText) html += `<div class="mb-3 text-gray-500 text-xs">🔍 جستجو برای: <span class="font-bold text-gray-800">${searchedText}</span></div>`;
       if (matchedProducts && matchedProducts.length > 0) {
         playSuccessFeedback();
         resultDiv.classList.add("bg-gray-50", "border-gray-300");
-        
-        html += `<div class="mb-4 text-green-600 font-bold text-lg">✅ ${matchedProducts.length} کالا یافت شد:</div>`;
-        
-        html += `<div class="space-y-3">`;
+        html += `<div class="mb-4 text-green-600 font-bold text-lg">✅ ${matchedProducts.length} کالا یافت شد:</div><div class="space-y-3">`;
         matchedProducts.forEach(product => {
           html += `
             <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
               <div class="text-lg font-bold text-gray-800 mb-2 leading-tight">${product.name}</div>
-              
               <div class="flex flex-col gap-2 mb-3 pb-3 border-b border-gray-100">
                 <div class="text-sm text-gray-500 font-mono">🔖 کد: <span class="font-bold text-gray-700">${product.barcode}</span></div>
                 <div class="text-sm text-blue-700 bg-blue-50 px-2 py-1.5 rounded inline-flex items-center gap-1 w-fit">
                   📍 جانمایی: <span class="font-bold">${product.location}</span>
                 </div>
               </div>
-              
               <div class="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100">
                 <span class="text-blue-800 font-semibold">📦 موجودی انبار:</span>
                 <span class="text-2xl font-black text-blue-600">${product.stock}</span>
               </div>
-            </div>
-          `;
+            </div>`;
         });
         html += `</div>`;
       } else {
         resultDiv.classList.add("bg-red-50", "border-red-300", "text-red-900");
         html += `<div class="flex items-center gap-2 text-base font-bold"><span>❌</span> متاسفانه چیزی پیدا نشد.</div>`;
       }
-
       resultDiv.innerHTML = html;
     }
 
-    // ==========================================
-    // ۵. جستجوی دستی
-    // ==========================================
     function searchManual() {
       let text = document.getElementById("manualInput").value.trim();
       if(!text) return;
-      
       document.getElementById("suggestionsList").classList.add("hidden");
-
       text = toEnglishDigits(text);
-      let matches = products.filter(p => 
-        p.barcode.toUpperCase().includes(text.toUpperCase()) || 
-        p.name.includes(text)
-      );
-      
+      let matches = products.filter(p => p.barcode.toUpperCase().includes(text.toUpperCase()) || p.name.includes(text));
       showResult(matches, text);
     }
 
-    // ==========================================
-    // ۶. مدیریت دوربین
-    // ==========================================
     let qrScanner = null;
-    function startScanner() {
+    function startScanner(mode) {
+      currentScannerMode = mode;
       stopScanner();
-      document.getElementById("reader").classList.remove("hidden");
+      document.getElementById("reader-container").classList.remove("hidden");
       qrScanner = new Html5Qrcode("reader");
       
       qrScanner.start(
@@ -307,19 +506,25 @@
         { fps: 10, qrbox: { width: 250, height: 250 } },
         (decodedText) => {
           decodedText = toEnglishDigits(decodedText.trim());
-          const matches = products.filter(p => p.barcode.toUpperCase() === decodedText.toUpperCase());
-          document.getElementById("manualInput").value = decodedText;
-          showResult(matches, decodedText);
           stopScanner();
+          
+          if(currentScannerMode === 'location') {
+            const matches = products.filter(p => p.barcode.toUpperCase() === decodedText.toUpperCase());
+            document.getElementById("manualInput").value = decodedText;
+            showResult(matches, decodedText);
+          } else if (currentScannerMode === 'stocktaking') {
+            openStockModal(decodedText);
+          }
         },
         (err) => {}
       ).catch(err => {
         Swal.fire('خطا', 'دوربین در دسترس نیست.', 'error');
+        stopScanner();
       });
     }
 
     function stopScanner() {
-      document.getElementById("reader").classList.add("hidden");
+      document.getElementById("reader-container").classList.add("hidden");
       if (qrScanner) {
         qrScanner.stop().catch(e => {});
         qrScanner = null;
