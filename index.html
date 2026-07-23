@@ -14,7 +14,6 @@
   <!-- کتابخانه‌های مورد نیاز -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://unpkg.com/papaparse@5.3.2/papaparse.min.js"></script>
-  <!-- اضافه شدن کتابخانه SheetJS برای خروجی اکسل واقعی -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <style>
@@ -93,7 +92,15 @@
       <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
         <div class="flex justify-between items-center mb-3 border-b pb-2">
           <h3 class="font-bold text-gray-700 text-sm">لیست شمارش‌های امروز:</h3>
-          <span id="stockCountBadge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded">۰ ردیف</span>
+          
+          <!-- دکمه حذف کل و نشانگر تعداد -->
+          <div class="flex items-center gap-2">
+            <span id="stockCountBadge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded">۰ ردیف</span>
+            <button onclick="deleteAllStockRecords()" class="bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 px-2 py-1 rounded transition text-sm flex items-center gap-1 shadow-sm" title="پاک کردن کل لیست">
+              🗑️ حذف همه
+            </button>
+          </div>
+
         </div>
         
         <div id="stocktakingList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
@@ -101,7 +108,6 @@
         </div>
       </div>
 
-      <!-- تغییر متن دکمه خروجی اکسل -->
       <button onclick="exportToExcel()" class="bg-emerald-500 hover:bg-emerald-600 text-white w-full py-3 rounded-xl transition shadow text-sm font-bold flex justify-center items-center gap-2">
         📥 دانلود فایل اکسل (XLSX)
       </button>
@@ -133,7 +139,8 @@
         <div class="space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
           <div>
             <label class="block text-xs text-gray-500 font-bold mb-1">کد کالا</label>
-            <input type="text" id="st_barcode" class="w-full border border-gray-300 rounded p-2 text-sm text-left dir-ltr focus:ring-2 focus:ring-indigo-400 outline-none">
+            <!-- اضافه شدن oninput برای جستجوی لحظه ای نام کالا -->
+            <input type="text" id="st_barcode" oninput="autoFillProductName()" class="w-full border border-gray-300 rounded p-2 text-sm text-left dir-ltr focus:ring-2 focus:ring-indigo-400 outline-none">
           </div>
           <div>
             <label class="block text-xs text-gray-500 font-bold mb-1">شرح کالا</label>
@@ -268,18 +275,7 @@
       document.getElementById('st_count').value = '';
       
       if(scannedBarcode) {
-        const foundProduct = products.find(p => p.barcode.toUpperCase() === scannedBarcode.toUpperCase());
-        if(foundProduct) {
-          document.getElementById('st_name').value = foundProduct.name;
-        } else {
-          Swal.fire({
-            title: 'کالای جدید!',
-            text: 'این بارکد در سیستم ثبت نشده است. لطفاً شرح کالا را دستی وارد کنید.',
-            icon: 'info',
-            timer: 3000,
-            showConfirmButton: false
-          });
-        }
+        autoFillProductName(); // استفاده از تابع جدید برای پر کردن نام پس از اسکن
       }
 
       document.getElementById('stockModal').classList.remove('hidden');
@@ -288,6 +284,23 @@
 
     function closeStockModal() {
       document.getElementById('stockModal').classList.add('hidden');
+    }
+
+    // تابع جدید: تکمیل خودکار نام کالا
+    function autoFillProductName() {
+      const barcodeValue = toEnglishDigits(document.getElementById('st_barcode').value.trim());
+      const nameInput = document.getElementById('st_name');
+      
+      if (barcodeValue === '') {
+        nameInput.value = '';
+        return;
+      }
+
+      const foundProduct = products.find(p => p.barcode.toUpperCase() === barcodeValue.toUpperCase());
+      
+      if (foundProduct) {
+        nameInput.value = foundProduct.name;
+      }
     }
 
     function saveStockData() {
@@ -356,6 +369,32 @@
       }
     }
 
+    // تابع جدید: حذف تمام رکوردها با تاییدیه
+    function deleteAllStockRecords() {
+      if (stocktakingRecords.length === 0) {
+        Swal.fire('لیست خالی است', 'چیزی برای پاک کردن وجود ندارد.', 'info');
+        return;
+      }
+
+      Swal.fire({
+        title: 'حذف کل لیست؟',
+        text: "آیا مطمئن هستید؟ تمام شمارش‌های این لیست پاک خواهد شد و قابل بازگشت نیست!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'بله، همه را پاک کن!',
+        cancelButtonText: 'انصراف'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          stocktakingRecords = []; // خالی کردن آرایه
+          localStorage.removeItem('stocktakingData'); // پاک کردن از حافظه مرورگر
+          renderStocktakingList(); // بروزرسانی ظاهر لیست
+          Swal.fire('پاک شد!', 'لیست شمارش‌ها با موفقیت خالی شد.', 'success');
+        }
+      });
+    }
+
     // ==========================================
     // خروجی اکسل (XLSX واقعی با استفاده از SheetJS)
     // ==========================================
@@ -365,7 +404,6 @@
         return;
       }
 
-      // آماده‌سازی داده‌ها با نام‌های فارسی ستون‌ها برای اکسل
       const excelData = stocktakingRecords.map(row => ({
         "کد کالا": row.barcode,
         "شرح کالا": row.name,
@@ -377,30 +415,19 @@
         "زمان ثبت": row.time
       }));
 
-      // تبدیل داده‌ها به یک ورک‌شیت
       const worksheet = XLSX.utils.json_to_sheet(excelData);
 
-      // تنظیم جهت فایل اکسل به صورت راست به چپ (RTL)
       if(!worksheet['!dir']) worksheet['!dir'] = 'rtl';
 
-      // تنظیم عرض ستون‌ها برای خوانایی بهتر
       const wscols = [
-        {wch: 15}, // کد کالا
-        {wch: 35}, // شرح کالا
-        {wch: 15}, // نام انبار
-        {wch: 10}, // شماره بخش
-        {wch: 12}, // تعداد شمارش
-        {wch: 15}, // ثبت کننده
-        {wch: 15}, // کنترل کننده
-        {wch: 12}  // زمان ثبت
+        {wch: 15}, {wch: 35}, {wch: 15}, {wch: 10}, 
+        {wch: 12}, {wch: 15}, {wch: 15}, {wch: 12}  
       ];
       worksheet['!cols'] = wscols;
 
-      // ساخت ورک‌بوک و اضافه کردن شیت به آن
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "انبارگردانی");
 
-      // تولید فایل و دانلود آن
       const dateStr = new Date().toLocaleDateString('fa-IR').replace(/\//g, '-');
       XLSX.writeFile(workbook, `Stocktaking_${dateStr}.xlsx`);
     }
