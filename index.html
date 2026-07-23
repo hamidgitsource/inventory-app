@@ -11,8 +11,11 @@
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+  <!-- کتابخانه‌های مورد نیاز -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://unpkg.com/papaparse@5.3.2/papaparse.min.js"></script>
+  <!-- اضافه شدن کتابخانه SheetJS برای خروجی اکسل واقعی -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <style>
     body { font-family: Tahoma, Arial, sans-serif; }
@@ -94,13 +97,13 @@
         </div>
         
         <div id="stocktakingList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
-          <!-- ردیف های ثبت شده اینجا نمایش داده میشوند -->
           <p class="text-xs text-gray-400 text-center py-4">هنوز کالایی شمرده نشده است.</p>
         </div>
       </div>
 
+      <!-- تغییر متن دکمه خروجی اکسل -->
       <button onclick="exportToExcel()" class="bg-emerald-500 hover:bg-emerald-600 text-white w-full py-3 rounded-xl transition shadow text-sm font-bold flex justify-center items-center gap-2">
-        📥 دانلود فایل اکسل (CSV)
+        📥 دانلود فایل اکسل (XLSX)
       </button>
 
     </div>
@@ -127,7 +130,6 @@
 
       <div class="p-5 space-y-4 overflow-y-auto flex-1">
         
-        <!-- ردیف اول: کالا -->
         <div class="space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
           <div>
             <label class="block text-xs text-gray-500 font-bold mb-1">کد کالا</label>
@@ -139,7 +141,6 @@
           </div>
         </div>
 
-        <!-- ردیف دوم: اطلاعات مکانی و شمارش -->
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs text-gray-500 font-bold mb-1">نام انبار</label>
@@ -155,7 +156,6 @@
           </div>
         </div>
 
-        <!-- ردیف سوم: اشخاص -->
         <div class="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
           <div>
             <label class="block text-xs text-gray-500 font-bold mb-1">ثبت کننده</label>
@@ -185,11 +185,10 @@
     const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQMuYI529qvGmpXFevG7jZRChAjwxaqaFJJe-1dn3oy95WU5GWzZKrQxp9dr2o7U0ECL9niUEWx79f2/pub?output=csv";
 
     let products = [];
-    let stocktakingRecords = []; // آرایه برای ذخیره شمارش‌ها
+    let stocktakingRecords = []; 
     let activeTab = 'location';
     let currentScannerMode = 'location';
 
-    // بازیابی دیتای انبارگردانی قبلی از حافظه مرورگر
     window.onload = () => {
       fetchData();
       const savedStock = localStorage.getItem('stocktakingData');
@@ -198,7 +197,6 @@
         renderStocktakingList();
       }
       
-      // بازیابی نام‌های پیش‌فرض اشخاص و مکان برای سرعت بیشتر
       document.getElementById('st_warehouse').value = localStorage.getItem('st_last_warehouse') || '';
       document.getElementById('st_section').value = localStorage.getItem('st_last_section') || '';
       document.getElementById('st_registrar').value = localStorage.getItem('st_last_registrar') || '';
@@ -269,13 +267,11 @@
       document.getElementById('st_name').value = '';
       document.getElementById('st_count').value = '';
       
-      // اگر بارکد اسکن شده بود، نامش را از دیتابیس پیدا کن
       if(scannedBarcode) {
         const foundProduct = products.find(p => p.barcode.toUpperCase() === scannedBarcode.toUpperCase());
         if(foundProduct) {
           document.getElementById('st_name').value = foundProduct.name;
         } else {
-          // اگر در سیستم نبود
           Swal.fire({
             title: 'کالای جدید!',
             text: 'این بارکد در سیستم ثبت نشده است. لطفاً شرح کالا را دستی وارد کنید.',
@@ -287,8 +283,6 @@
       }
 
       document.getElementById('stockModal').classList.remove('hidden');
-      
-      // فوکوس اتوماتیک روی فیلد تعداد
       setTimeout(() => document.getElementById('st_count').focus(), 300);
     }
 
@@ -310,7 +304,6 @@
         return;
       }
 
-      // ذخیره مقادیر تکراری برای استفاده در دفعات بعد (سرعت بیشتر کاربر)
       localStorage.setItem('st_last_warehouse', warehouse);
       localStorage.setItem('st_last_section', section);
       localStorage.setItem('st_last_registrar', registrar);
@@ -318,10 +311,7 @@
 
       const record = { barcode, name, warehouse, section, count, registrar, controller, time: new Date().toLocaleTimeString('fa-IR') };
       
-      // اضافه کردن به ابتدای آرایه
       stocktakingRecords.unshift(record);
-      
-      // ذخیره در حافظه پنهان مرورگر
       localStorage.setItem('stocktakingData', JSON.stringify(stocktakingRecords));
 
       renderStocktakingList();
@@ -367,7 +357,7 @@
     }
 
     // ==========================================
-    // خروجی اکسل
+    // خروجی اکسل (XLSX واقعی با استفاده از SheetJS)
     // ==========================================
     function exportToExcel() {
       if(stocktakingRecords.length === 0) {
@@ -375,33 +365,45 @@
         return;
       }
 
-      // افزودن BOM برای پشتیبانی از حروف فارسی در اکسل
-      let csvContent = "\uFEFF"; 
-      
-      // هدر فایل اکسل
-      csvContent += "کد کالا,شرح کالا,نام انبار,شماره بخش,تعداد شمارش,ثبت کننده,کنترل کننده,زمان ثبت\n";
-      
-      // داده ها
-      stocktakingRecords.forEach(row => {
-        // برای جلوگیری از بهم ریختگی اگر در نام کالا کاما وجود داشت
-        let safeName = row.name.replace(/,/g, " "); 
-        csvContent += `${row.barcode},${safeName},${row.warehouse},${row.section},${row.count},${row.registrar},${row.controller},${row.time}\n`;
-      });
+      // آماده‌سازی داده‌ها با نام‌های فارسی ستون‌ها برای اکسل
+      const excelData = stocktakingRecords.map(row => ({
+        "کد کالا": row.barcode,
+        "شرح کالا": row.name,
+        "نام انبار": row.warehouse,
+        "شماره بخش": row.section,
+        "تعداد شمارش": Number(row.count),
+        "ثبت کننده": row.registrar,
+        "کنترل کننده": row.controller,
+        "زمان ثبت": row.time
+      }));
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      
-      // نام فایل همراه با تاریخ روز
+      // تبدیل داده‌ها به یک ورک‌شیت
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+      // تنظیم جهت فایل اکسل به صورت راست به چپ (RTL)
+      if(!worksheet['!dir']) worksheet['!dir'] = 'rtl';
+
+      // تنظیم عرض ستون‌ها برای خوانایی بهتر
+      const wscols = [
+        {wch: 15}, // کد کالا
+        {wch: 35}, // شرح کالا
+        {wch: 15}, // نام انبار
+        {wch: 10}, // شماره بخش
+        {wch: 12}, // تعداد شمارش
+        {wch: 15}, // ثبت کننده
+        {wch: 15}, // کنترل کننده
+        {wch: 12}  // زمان ثبت
+      ];
+      worksheet['!cols'] = wscols;
+
+      // ساخت ورک‌بوک و اضافه کردن شیت به آن
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "انبارگردانی");
+
+      // تولید فایل و دانلود آن
       const dateStr = new Date().toLocaleDateString('fa-IR').replace(/\//g, '-');
-      link.setAttribute("download", `Stocktaking_${dateStr}.csv`);
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      XLSX.writeFile(workbook, `Stocktaking_${dateStr}.xlsx`);
     }
-
 
     // ==========================================
     // توابع کمکی و جستجو و دوربین
@@ -415,7 +417,6 @@
       if (navigator.vibrate) navigator.vibrate(200); 
     }
 
-    // جستجوی زنده (مشابه قبل)
     document.addEventListener('click', function(e) {
       const input = document.getElementById('manualInput');
       const list = document.getElementById('suggestionsList');
