@@ -17,7 +17,6 @@
   <style>
     body { font-family: Tahoma, Arial, sans-serif; }
     #reader video { border-radius: 12px; width: 100%; max-height: 300px; object-fit: cover; }
-    /* استایل اختصاصی برای اسکرول‌بار لیست کشویی */
     #suggestionsList::-webkit-scrollbar { width: 6px; }
     #suggestionsList::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
   </style>
@@ -45,7 +44,7 @@
     <!-- فریم نمایش دوربین -->
     <div id="reader" class="hidden border-2 border-dashed border-blue-300 rounded-xl p-2 bg-blue-50"></div>
 
-    <!-- بخش جستجوی دستی (تغییر یافته برای جستجوی زنده) -->
+    <!-- بخش جستجوی دستی -->
     <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
       <label class="block text-sm text-gray-700 mb-2 font-medium">جستجوی دستی (نام یا کد):</label>
       <div class="flex gap-2">
@@ -55,7 +54,7 @@
           <input type="text" id="manualInput" oninput="handleLiveSearch()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 outline-none transition" placeholder="مثلاً: مته خزینه..." autocomplete="off">
           
           <!-- لیست کشویی پیشنهادات -->
-          <ul id="suggestionsList" class="hidden absolute z-50 w-full bg-white border border-gray-200 shadow-xl max-h-48 rounded-lg overflow-y-auto mt-1 divide-y divide-gray-100">
+          <ul id="suggestionsList" class="hidden absolute z-50 w-full bg-white border border-gray-200 shadow-xl max-h-60 rounded-lg overflow-y-auto mt-1 divide-y divide-gray-100">
             <!-- آیتم‌ها توسط جاوااسکریپت اینجا قرار می‌گیرند -->
           </ul>
         </div>
@@ -166,7 +165,6 @@
       if (navigator.vibrate) navigator.vibrate(200); 
     }
 
-    // بستن لیست کشویی وقتی بیرون از آن کلیک می‌شود
     document.addEventListener('click', function(e) {
       const input = document.getElementById('manualInput');
       const list = document.getElementById('suggestionsList');
@@ -176,7 +174,7 @@
     });
 
     // ==========================================
-    // ۳. جستجوی زنده (Live Search) - جدید
+    // ۳. جستجوی زنده (اصلاح شده برای نام‌های طولانی)
     // ==========================================
     function handleLiveSearch() {
       const inputText = document.getElementById("manualInput").value.trim();
@@ -198,30 +196,29 @@
         return;
       }
 
-      // ساخت آیتم‌های لیست کشویی
       list.innerHTML = "";
       matches.forEach(product => {
         const li = document.createElement("li");
-        li.className = "px-4 py-3 hover:bg-blue-50 cursor-pointer transition flex justify-between items-center";
+        // تغییرات: استفاده از items-start به جای items-center تا در صورت دو خطی شدن نام کالا، ظاهر به هم نریزد
+        li.className = "px-4 py-3 hover:bg-blue-50 cursor-pointer transition flex justify-between items-start gap-3";
         
-        // نام کالا
+        // تغییرات: حذف truncate (سه‌نقطه) و استفاده از flex-1 و break-words برای شکستن خط
         const nameSpan = document.createElement("span");
-        nameSpan.className = "text-sm text-gray-800 font-medium truncate w-3/4";
+        nameSpan.className = "text-sm text-gray-800 font-medium leading-relaxed flex-1 break-words";
         nameSpan.innerText = product.name;
         
-        // موجودی کوچک در کنار آن
+        // تغییرات: اضافه کردن shrink-0 تا با طولانی شدن نام، باکس موجودی فشرده نشود
         const stockSpan = document.createElement("span");
-        stockSpan.className = "text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded font-bold";
+        stockSpan.className = "text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded font-bold shrink-0 mt-0.5";
         stockSpan.innerText = product.stock;
 
         li.appendChild(nameSpan);
         li.appendChild(stockSpan);
 
-        // با کلیک روی آیتم، کالا انتخاب می‌شود
         li.onclick = () => {
           document.getElementById("manualInput").value = product.name;
           list.classList.add("hidden");
-          showResult([product]); // نمایش اطلاعات فقط همین کالا
+          showResult([product]);
         };
 
         list.appendChild(li);
@@ -279,13 +276,12 @@
     }
 
     // ==========================================
-    // ۵. جستجوی دستی (با زدن دکمه جستجو)
+    // ۵. جستجوی دستی
     // ==========================================
     function searchManual() {
       let text = document.getElementById("manualInput").value.trim();
       if(!text) return;
       
-      // پنهان کردن کشویی هنگام کلیک روی دکمه جستجو
       document.getElementById("suggestionsList").classList.add("hidden");
 
       text = toEnglishDigits(text);
