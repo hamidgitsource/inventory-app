@@ -129,11 +129,11 @@
   </div>
 
   <!-- ========================================== -->
-  <!-- فریم نمایش دوربین (آزاد و فول اسکرین با راهنمای بصری) -->
+  <!-- فریم نمایش دوربین (با ماسک تاریک و کادر شفاف) -->
   <!-- ========================================== -->
   <div id="reader-container" class="hidden fixed inset-0 bg-black z-[100] flex flex-col">
     <!-- هدر دوربین -->
-    <div class="absolute top-0 w-full p-4 flex justify-between items-center z-50 bg-gradient-to-b from-black/80 to-transparent">
+    <div class="absolute top-0 w-full p-4 flex justify-between items-center z-50 bg-gradient-to-b from-black/90 to-transparent">
        <h3 class="text-white font-bold text-lg drop-shadow-md">جستجوی خودکار کد...</h3>
        <button onclick="stopScanner()" class="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white p-2 rounded-full transition border border-white/30">
          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -144,31 +144,35 @@
     
     <!-- محفظه اصلی ویدیو -->
     <div class="flex-1 flex justify-center items-center h-full w-full relative overflow-hidden">
+       <!-- لنز دوربین -->
        <div id="reader" class="w-full h-full absolute inset-0"></div>
        
-       <!-- المان‌های بصری اسکنر (راهنما و لیزر) -->
+       <!-- المان‌های بصری اسکنر (ماسک تاریک اطراف و کادر شفاف وسط) -->
        <div class="absolute inset-0 flex justify-center items-center pointer-events-none z-40">
-         <div class="relative w-64 h-64 md:w-80 md:h-80">
+         
+         <!-- با استفاده از shadow عظیم، بیرون این باکس تاریک و داخلش شفاف می‌ماند -->
+         <div class="relative w-64 h-64 md:w-72 md:h-72 shadow-[0_0_0_4000px_rgba(0,0,0,0.65)] rounded-2xl">
+            
             <!-- گوشه های کادر راهنما -->
-            <div class="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-blue-500 rounded-tr-2xl opacity-80"></div>
-            <div class="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-blue-500 rounded-tl-2xl opacity-80"></div>
-            <div class="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-blue-500 rounded-br-2xl opacity-80"></div>
-            <div class="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-blue-500 rounded-bl-2xl opacity-80"></div>
+            <div class="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-blue-500 rounded-tr-2xl opacity-100"></div>
+            <div class="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-blue-500 rounded-tl-2xl opacity-100"></div>
+            <div class="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-blue-500 rounded-br-2xl opacity-100"></div>
+            <div class="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-blue-500 rounded-bl-2xl opacity-100"></div>
             
             <!-- خط لیزر متحرک -->
-            <div class="laser-line absolute left-4 right-4 h-0.5 bg-blue-500 shadow-[0_0_12px_3px_rgba(59,130,246,0.9)] rounded-full"></div>
+            <div class="laser-line absolute left-3 right-3 h-0.5 bg-blue-500 shadow-[0_0_15px_4px_rgba(59,130,246,0.8)] rounded-full"></div>
          </div>
+
        </div>
     </div>
 
     <!-- متن راهنما -->
-    <div class="absolute bottom-10 w-full flex justify-center z-50 pointer-events-none">
-       <span class="bg-black/60 backdrop-blur-md text-white px-6 py-2 rounded-full text-sm font-medium border border-white/20 shadow-lg animate-pulse">
-          گوشی را روی بارکد بگیرید (بدون نیاز به تنظیم دقیق)
+    <div class="absolute bottom-12 w-full flex justify-center z-50 pointer-events-none">
+       <span class="bg-black/70 backdrop-blur-md text-white px-6 py-2 rounded-full text-sm font-medium border border-white/20 shadow-lg animate-pulse">
+          بارکد را در کادر روشن قرار دهید
        </span>
     </div>
   </div>
-
   <!-- ========================================== -->
   <!-- پاپ آپ (Modal) فرم تگ انبارگردانی (بدون تغییر) -->
   <!-- ========================================== -->
