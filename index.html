@@ -493,11 +493,10 @@
       });
       
       // تنظیمات استاندارد و پایدار برای لنز گوشی
-     const cameraConstraints = {
-  facingMode: "environment",
-  width: { ideal: 1280 },
-  height: { ideal: 720 }
-};
+      const cameraConstraints = {
+        facingMode: "environment"
+      };
+      
       qrScanner.start(
         cameraConstraints,
         { 
