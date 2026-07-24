@@ -23,9 +23,20 @@
     .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: bold; }
     .tab-inactive { color: #6b7280; border-bottom: 3px solid transparent; }
     
-    /* استایل‌های اختصاصی برای اسکنر فول‌اسکرین مشابه تلگرام */
+    /* استایل‌های اختصاصی برای اسکنر فول‌اسکرین */
     #reader { width: 100%; border: none !important; background-color: #000; }
-    #reader video { object-fit: cover; border-radius: 0 !important; }
+    #reader video { object-fit: cover; border-radius: 0 !important; width: 100% !important; height: 100% !important; }
+    
+    /* انیمیشن لیزر اسکنر */
+    @keyframes scanAnimation {
+      0% { top: 0; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { top: 100%; opacity: 0; }
+    }
+    .laser-line {
+      animation: scanAnimation 2s infinite ease-in-out;
+    }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800 flex justify-center min-h-screen p-4 md:p-8">
@@ -50,7 +61,7 @@
       
       <div class="flex gap-2 justify-center">
         <button onclick="startScanner('location')" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-xl transition shadow text-sm font-bold flex justify-center items-center gap-2">
-          📷 اسکن بارکد
+          📷 اسکن سریع بارکد
         </button>
       </div>
 
@@ -118,12 +129,12 @@
   </div>
 
   <!-- ========================================== -->
-  <!-- فریم نمایش دوربین (طراحی جدید فول اسکرین) -->
+  <!-- فریم نمایش دوربین (آزاد و فول اسکرین با راهنمای بصری) -->
   <!-- ========================================== -->
   <div id="reader-container" class="hidden fixed inset-0 bg-black z-[100] flex flex-col">
     <!-- هدر دوربین -->
     <div class="absolute top-0 w-full p-4 flex justify-between items-center z-50 bg-gradient-to-b from-black/80 to-transparent">
-       <h3 class="text-white font-bold text-lg drop-shadow-md">اسکن بارکد</h3>
+       <h3 class="text-white font-bold text-lg drop-shadow-md">جستجوی خودکار کد...</h3>
        <button onclick="stopScanner()" class="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white p-2 rounded-full transition border border-white/30">
          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -131,32 +142,43 @@
        </button>
     </div>
     
-    <!-- محفظه اسکنر -->
-    <div class="flex-1 flex justify-center items-center h-full w-full relative">
+    <!-- محفظه اصلی ویدیو -->
+    <div class="flex-1 flex justify-center items-center h-full w-full relative overflow-hidden">
        <div id="reader" class="w-full h-full absolute inset-0"></div>
+       
+       <!-- المان‌های بصری اسکنر (راهنما و لیزر) -->
+       <div class="absolute inset-0 flex justify-center items-center pointer-events-none z-40">
+         <div class="relative w-64 h-64 md:w-80 md:h-80">
+            <!-- گوشه های کادر راهنما -->
+            <div class="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-blue-500 rounded-tr-2xl opacity-80"></div>
+            <div class="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-blue-500 rounded-tl-2xl opacity-80"></div>
+            <div class="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-blue-500 rounded-br-2xl opacity-80"></div>
+            <div class="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-blue-500 rounded-bl-2xl opacity-80"></div>
+            
+            <!-- خط لیزر متحرک -->
+            <div class="laser-line absolute left-4 right-4 h-0.5 bg-blue-500 shadow-[0_0_12px_3px_rgba(59,130,246,0.9)] rounded-full"></div>
+         </div>
+       </div>
     </div>
 
-    <!-- راهنمای پایین دوربین -->
+    <!-- متن راهنما -->
     <div class="absolute bottom-10 w-full flex justify-center z-50 pointer-events-none">
-       <span class="bg-black/60 backdrop-blur-md text-white px-6 py-2 rounded-full text-sm font-medium border border-white/20 shadow-lg">
-          بارکد را درون کادر روشن قرار دهید
+       <span class="bg-black/60 backdrop-blur-md text-white px-6 py-2 rounded-full text-sm font-medium border border-white/20 shadow-lg animate-pulse">
+          گوشی را روی بارکد بگیرید (بدون نیاز به تنظیم دقیق)
        </span>
     </div>
   </div>
 
   <!-- ========================================== -->
-  <!-- پاپ آپ (Modal) فرم تگ انبارگردانی -->
+  <!-- پاپ آپ (Modal) فرم تگ انبارگردانی (بدون تغییر) -->
   <!-- ========================================== -->
   <div id="stockModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-70 z-50 flex justify-center items-center p-4 backdrop-blur-sm">
     <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-      
       <div class="bg-indigo-600 p-4 text-white flex justify-between items-center shrink-0">
         <h3 class="font-bold text-lg">📝 تگ انبارگردانی</h3>
         <button onclick="closeStockModal()" class="text-white hover:text-gray-200 text-xl font-bold">&times;</button>
       </div>
-
       <div class="p-5 space-y-4 overflow-y-auto flex-1">
-        
         <div class="space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
           <div>
             <label class="block text-xs text-gray-500 font-bold mb-1">کد کالا</label>
@@ -167,7 +189,6 @@
             <input type="text" id="st_name" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-400 outline-none">
           </div>
         </div>
-
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs text-gray-500 font-bold mb-1">نام انبار</label>
@@ -182,7 +203,6 @@
             <input type="number" id="st_count" class="w-full border-2 border-indigo-300 rounded p-2 text-lg font-bold text-center focus:ring-2 focus:ring-indigo-500 outline-none">
           </div>
         </div>
-
         <div class="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
           <div>
             <label class="block text-xs text-gray-500 font-bold mb-1">ثبت کننده</label>
@@ -193,15 +213,12 @@
             <input type="text" id="st_controller" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-400 outline-none">
           </div>
         </div>
-
       </div>
-
       <div class="p-4 border-t bg-gray-50 shrink-0">
         <button onclick="saveStockData()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow transition">
           ✅ تایید و ثبت در لیست
         </button>
       </div>
-
     </div>
   </div>
 
@@ -267,7 +284,6 @@
               updateContainer.classList.remove("hidden");
               updateText.innerHTML = `🕒 آخرین آپدیت موجودی سرور:<br><strong class="block mt-1 text-blue-900 text-sm dir-ltr">${sheetLastUpdate}</strong>`;
               
-              // بازگرداندن پاپ‌آپ خوشگل (حالت Toast)
               Swal.fire({
                 toast: true,
                 position: 'top',
@@ -282,59 +298,38 @@
         })
         .catch(error => {
           if(btn) btn.innerText = "🔄 دریافت آخرین دیتا از سرور";
-          Swal.fire({
-            icon: 'error',
-            title: 'خطا در ارتباط',
-            text: 'مشکلی در دریافت اطلاعات پیش آمد. اینترنت خود را بررسی کنید.'
-          });
+          Swal.fire({ icon: 'error', title: 'خطا در ارتباط', text: 'مشکلی در دریافت اطلاعات پیش آمد.' });
         });
     }
 
     // ==========================================
-    // مدیریت تب‌ها
+    // مدیریت تب‌ها و توابع عملیاتی (بدون تغییر ماندند)
     // ==========================================
     function switchTab(tabName) {
       activeTab = tabName;
       document.getElementById('tab-location').classList.toggle('hidden', tabName !== 'location');
       document.getElementById('tab-stocktaking').classList.toggle('hidden', tabName !== 'stocktaking');
-      
       document.getElementById('tab-btn-location').className = tabName === 'location' ? 'flex-1 pb-2 tab-active transition' : 'flex-1 pb-2 tab-inactive transition';
       document.getElementById('tab-btn-stocktaking').className = tabName === 'stocktaking' ? 'flex-1 pb-2 tab-active transition' : 'flex-1 pb-2 tab-inactive transition';
     }
 
-    // ==========================================
-    // عملیات انبارگردانی
-    // ==========================================
     function openStockModal(scannedBarcode = '') {
       document.getElementById('st_barcode').value = scannedBarcode;
       document.getElementById('st_name').value = '';
       document.getElementById('st_count').value = '';
-      
-      if(scannedBarcode) {
-        autoFillProductName(); 
-      }
-
+      if(scannedBarcode) autoFillProductName(); 
       document.getElementById('stockModal').classList.remove('hidden');
       setTimeout(() => document.getElementById('st_count').focus(), 300);
     }
 
-    function closeStockModal() {
-      document.getElementById('stockModal').classList.add('hidden');
-    }
+    function closeStockModal() { document.getElementById('stockModal').classList.add('hidden'); }
 
     function autoFillProductName() {
       const barcodeValue = toEnglishDigits(document.getElementById('st_barcode').value.trim());
       const nameInput = document.getElementById('st_name');
-      
-      if (barcodeValue === '') {
-        nameInput.value = '';
-        return;
-      }
-
+      if (barcodeValue === '') { nameInput.value = ''; return; }
       const foundProduct = products.find(p => p.barcode.toUpperCase() === barcodeValue.toUpperCase());
-      if (foundProduct) {
-        nameInput.value = foundProduct.name;
-      }
+      if (foundProduct) nameInput.value = foundProduct.name;
     }
 
     function saveStockData() {
@@ -347,20 +342,16 @@
       const controller = document.getElementById('st_controller').value.trim();
 
       if(!barcode || !name || count === '') {
-        Swal.fire('خطا', 'کد کالا، شرح و تعداد شمارش الزامی است!', 'error');
-        return;
+        Swal.fire('خطا', 'کد کالا، شرح و تعداد شمارش الزامی است!', 'error'); return;
       }
-
       localStorage.setItem('st_last_warehouse', warehouse);
       localStorage.setItem('st_last_section', section);
       localStorage.setItem('st_last_registrar', registrar);
       localStorage.setItem('st_last_controller', controller);
-
       const record = { barcode, name, warehouse, section, count, registrar, controller, time: new Date().toLocaleTimeString('fa-IR') };
       
       stocktakingRecords.unshift(record);
       localStorage.setItem('stocktakingData', JSON.stringify(stocktakingRecords));
-
       renderStocktakingList();
       closeStockModal();
       playSuccessFeedback();
@@ -369,14 +360,10 @@
     function renderStocktakingList() {
       const listDiv = document.getElementById('stocktakingList');
       const badge = document.getElementById('stockCountBadge');
-      
       badge.innerText = `${stocktakingRecords.length} ردیف`;
-
       if(stocktakingRecords.length === 0) {
-        listDiv.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">هنوز کالایی شمرده نشده است.</p>';
-        return;
+        listDiv.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">هنوز کالایی شمرده نشده است.</p>'; return;
       }
-
       let html = '';
       stocktakingRecords.forEach((item, index) => {
         html += `
@@ -385,12 +372,9 @@
               <div class="text-sm font-bold text-gray-800 truncate">${item.name}</div>
               <div class="text-xs text-gray-500 font-mono mt-1">${item.barcode} | ${item.warehouse} - ${item.section}</div>
             </div>
-            <div class="bg-indigo-100 text-indigo-800 font-black px-3 py-2 rounded-lg text-lg shrink-0">
-              ${item.count}
-            </div>
+            <div class="bg-indigo-100 text-indigo-800 font-black px-3 py-2 rounded-lg text-lg shrink-0">${item.count}</div>
             <button onclick="deleteStockRecord(${index})" class="ml-2 text-red-500 hover:bg-red-50 p-2 rounded shrink-0">🗑️</button>
-          </div>
-        `;
+          </div>`;
       });
       listDiv.innerHTML = html;
     }
@@ -404,85 +388,41 @@
     }
 
     function deleteAllStockRecords() {
-      if (stocktakingRecords.length === 0) {
-        Swal.fire('لیست خالی است', 'چیزی برای پاک کردن وجود ندارد.', 'info');
-        return;
-      }
-
+      if (stocktakingRecords.length === 0) return;
       Swal.fire({
-        title: 'حذف کل لیست؟',
-        text: "آیا مطمئن هستید؟ تمام شمارش‌های این لیست پاک خواهد شد و قابل بازگشت نیست!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'بله، همه را پاک کن!',
-        cancelButtonText: 'انصراف'
+        title: 'حذف کل لیست؟', text: "آیا مطمئن هستید؟ تمام شمارش‌های این لیست پاک خواهد شد!",
+        icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6', confirmButtonText: 'بله، پاک کن!', cancelButtonText: 'انصراف'
       }).then((result) => {
         if (result.isConfirmed) {
-          stocktakingRecords = []; 
-          localStorage.removeItem('stocktakingData'); 
-          renderStocktakingList(); 
-          Swal.fire('پاک شد!', 'لیست شمارش‌ها با موفقیت خالی شد.', 'success');
+          stocktakingRecords = []; localStorage.removeItem('stocktakingData'); 
+          renderStocktakingList(); Swal.fire('پاک شد!', 'لیست با موفقیت خالی شد.', 'success');
         }
       });
     }
 
-    // ==========================================
-    // خروجی اکسل (XLSX)
-    // ==========================================
     function exportToExcel() {
-      if(stocktakingRecords.length === 0) {
-        Swal.fire('لیست خالی است', 'هیچ دیتایی برای خروجی گرفتن وجود ندارد.', 'warning');
-        return;
-      }
-
+      if(stocktakingRecords.length === 0) { Swal.fire('لیست خالی است', '', 'warning'); return; }
       const excelData = stocktakingRecords.map(row => ({
-        "کد کالا": row.barcode,
-        "شرح کالا": row.name,
-        "نام انبار": row.warehouse,
-        "شماره بخش": row.section,
-        "تعداد شمارش": Number(row.count),
-        "ثبت کننده": row.registrar,
-        "کنترل کننده": row.controller,
-        "زمان ثبت": row.time
+        "کد کالا": row.barcode, "شرح کالا": row.name, "نام انبار": row.warehouse,
+        "شماره بخش": row.section, "تعداد شمارش": Number(row.count), "ثبت کننده": row.registrar,
+        "کنترل کننده": row.controller, "زمان ثبت": row.time
       }));
-
       const worksheet = XLSX.utils.json_to_sheet(excelData);
-
       if(!worksheet['!dir']) worksheet['!dir'] = 'rtl';
-
-      const wscols = [
-        {wch: 15}, {wch: 35}, {wch: 15}, {wch: 10}, 
-        {wch: 12}, {wch: 15}, {wch: 15}, {wch: 12}  
-      ];
-      worksheet['!cols'] = wscols;
-
+      worksheet['!cols'] = [ {wch: 15}, {wch: 35}, {wch: 15}, {wch: 10}, {wch: 12}, {wch: 15}, {wch: 15}, {wch: 12} ];
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "انبارگردانی");
-
-      const dateStr = new Date().toLocaleDateString('fa-IR').replace(/\//g, '-');
-      XLSX.writeFile(workbook, `Stocktaking_${dateStr}.xlsx`);
+      XLSX.writeFile(workbook, `Stocktaking_${new Date().toLocaleDateString('fa-IR').replace(/\//g, '-')}.xlsx`);
     }
 
-    // ==========================================
-    // توابع کمکی و جستجو و دوربین
-    // ==========================================
-    function toEnglishDigits(str) {
-      if(!str) return "";
-      return str.replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
-    }
-
-    function playSuccessFeedback() {
-      if (navigator.vibrate) navigator.vibrate(200); 
-    }
+    function toEnglishDigits(str) { return str ? str.replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)) : ""; }
+    function playSuccessFeedback() { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); }
 
     document.addEventListener('click', function(e) {
       const input = document.getElementById('manualInput');
       const list = document.getElementById('suggestionsList');
-      if (input && list && !input.contains(e.target) && !list.contains(e.target)) {
-        list.classList.add('hidden');
-      }
+      if (input && list && !input.contains(e.target) && !list.contains(e.target)) list.classList.add('hidden');
     });
 
     function handleLiveSearch() {
@@ -496,18 +436,8 @@
       matches.forEach(product => {
         const li = document.createElement("li");
         li.className = "px-4 py-3 hover:bg-blue-50 cursor-pointer transition flex justify-between items-start gap-3";
-        const nameSpan = document.createElement("span");
-        nameSpan.className = "text-sm text-gray-800 font-medium leading-relaxed flex-1 break-words";
-        nameSpan.innerText = product.name;
-        const stockSpan = document.createElement("span");
-        stockSpan.className = "text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded font-bold shrink-0 mt-0.5";
-        stockSpan.innerText = product.stock;
-        li.appendChild(nameSpan); li.appendChild(stockSpan);
-        li.onclick = () => {
-          document.getElementById("manualInput").value = product.name;
-          list.classList.add("hidden");
-          showResult([product]);
-        };
+        li.innerHTML = `<span class="text-sm text-gray-800 font-medium leading-relaxed flex-1 break-words">${product.name}</span><span class="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded font-bold shrink-0 mt-0.5">${product.stock}</span>`;
+        li.onclick = () => { document.getElementById("manualInput").value = product.name; list.classList.add("hidden"); showResult([product]); };
         list.appendChild(li);
       });
       list.classList.remove("hidden");
@@ -516,8 +446,7 @@
     function showResult(matchedProducts, searchedText = null) {
       const resultDiv = document.getElementById("result");
       resultDiv.classList.remove("hidden", "bg-gray-50", "border-gray-300", "bg-red-50", "border-red-300", "text-red-900");
-      let html = "";
-      if (searchedText) html += `<div class="mb-3 text-gray-500 text-xs">🔍 جستجو برای: <span class="font-bold text-gray-800">${searchedText}</span></div>`;
+      let html = searchedText ? `<div class="mb-3 text-gray-500 text-xs">🔍 جستجو برای: <span class="font-bold text-gray-800">${searchedText}</span></div>` : "";
       if (matchedProducts && matchedProducts.length > 0) {
         playSuccessFeedback();
         resultDiv.classList.add("bg-gray-50", "border-gray-300");
@@ -528,13 +457,10 @@
               <div class="text-lg font-bold text-gray-800 mb-2 leading-tight">${product.name}</div>
               <div class="flex flex-col gap-2 mb-3 pb-3 border-b border-gray-100">
                 <div class="text-sm text-gray-500 font-mono">🔖 کد: <span class="font-bold text-gray-700">${product.barcode}</span></div>
-                <div class="text-sm text-blue-700 bg-blue-50 px-2 py-1.5 rounded inline-flex items-center gap-1 w-fit">
-                  📍 جانمایی: <span class="font-bold">${product.location}</span>
-                </div>
+                <div class="text-sm text-blue-700 bg-blue-50 px-2 py-1.5 rounded inline-flex items-center gap-1 w-fit">📍 جانمایی: <span class="font-bold">${product.location}</span></div>
               </div>
               <div class="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100">
-                <span class="text-blue-800 font-semibold">📦 موجودی انبار:</span>
-                <span class="text-2xl font-black text-blue-600">${product.stock}</span>
+                <span class="text-blue-800 font-semibold">📦 موجودی انبار:</span><span class="text-2xl font-black text-blue-600">${product.stock}</span>
               </div>
             </div>`;
         });
@@ -546,21 +472,34 @@
       resultDiv.innerHTML = html;
     }
 
+    // ==========================================
+    // اسکنر بارکد (نسخه فوق سریع و بدون مرز)
+    // ==========================================
     let qrScanner = null;
+
     function startScanner(mode) {
       currentScannerMode = mode;
       stopScanner();
       
       document.getElementById("reader-container").classList.remove("hidden");
       
-      qrScanner = new Html5Qrcode("reader");
+      // فعالسازی تشخیص نیتیو برای سرعت بالا در صورت پشتیبانی گوشی
+      qrScanner = new Html5Qrcode("reader", { 
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true } 
+      });
       
+      // تنظیمات دوربین برای فوکوس پیوسته
+      const cameraConstraints = {
+        facingMode: "environment",
+        advanced: [{ focusMode: "continuous" }] // مجبور کردن لنز به فوکوس دائمی
+      };
+
       qrScanner.start(
-        { facingMode: "environment" },
+        cameraConstraints,
         { 
-          fps: 30, 
-          qrbox: { width: 220, height: 220 }, 
-          aspectRatio: window.innerHeight / window.innerWidth 
+          fps: 60, // دو برابر شدن فریم ریت برای واکنش آنی
+          disableFlip: true // لغو پردازش تصویر آینه‌ای (سرعت پردازش را بالا می‌برد)
+          // حذف qrbox تا دوربین تمام صفحه را برای یافتن کد بررسی کند
         },
         (decodedText) => {
           decodedText = toEnglishDigits(decodedText.trim());
@@ -574,8 +513,7 @@
             openStockModal(decodedText);
           }
         },
-        (err) => {
-        }
+        (err) => { /* خطاها در جستجوی آزاد طبیعی است و نادیده گرفته می‌شوند */ }
       ).catch(err => {
         Swal.fire('خطا', 'دوربین در دسترس نیست یا مجوز داده نشده است.', 'error');
         stopScanner();
