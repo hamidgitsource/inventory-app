@@ -483,23 +483,21 @@
       
       document.getElementById("reader-container").classList.remove("hidden");
       
-      // فعالسازی تشخیص نیتیو برای سرعت بالا در صورت پشتیبانی گوشی
+      // استفاده از تشخیص سریع در صورت پشتیبانی
       qrScanner = new Html5Qrcode("reader", { 
         experimentalFeatures: { useBarCodeDetectorIfSupported: true } 
       });
       
-      // تنظیمات دوربین برای فوکوس پیوسته
+      // تنظیمات استاندارد و پایدار برای لنز گوشی
       const cameraConstraints = {
-        facingMode: "environment",
-        advanced: [{ focusMode: "continuous" }] // مجبور کردن لنز به فوکوس دائمی
+        facingMode: "environment"
       };
 
       qrScanner.start(
         cameraConstraints,
         { 
-          fps: 60, // دو برابر شدن فریم ریت برای واکنش آنی
-          disableFlip: true // لغو پردازش تصویر آینه‌ای (سرعت پردازش را بالا می‌برد)
-          // حذف qrbox تا دوربین تمام صفحه را برای یافتن کد بررسی کند
+          fps: 30, // ۳۰ فریم بر ثانیه برای اکثر گوشی‌ها پایدارترین حالت است
+          disableFlip: true 
         },
         (decodedText) => {
           decodedText = toEnglishDigits(decodedText.trim());
@@ -513,13 +511,13 @@
             openStockModal(decodedText);
           }
         },
-        (err) => { /* خطاها در جستجوی آزاد طبیعی است و نادیده گرفته می‌شوند */ }
+        (err) => { /* خطاها در جستجوی آزاد طبیعی است */ }
       ).catch(err => {
-        Swal.fire('خطا', 'دوربین در دسترس نیست یا مجوز داده نشده است.', 'error');
+        console.error("Camera Error:", err);
+        Swal.fire('خطا', 'دوربین در دسترس نیست. لطفا مطمئن شوید مرورگر دسترسی به دوربین دارد.', 'error');
         stopScanner();
       });
     }
-
     function stopScanner() {
       document.getElementById("reader-container").classList.add("hidden");
       if (qrScanner) {
