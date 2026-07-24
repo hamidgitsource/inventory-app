@@ -266,11 +266,27 @@
               const updateText = document.getElementById("lastUpdateText");
               updateContainer.classList.remove("hidden");
               updateText.innerHTML = `🕒 آخرین آپدیت موجودی سرور:<br><strong class="block mt-1 text-blue-900 text-sm dir-ltr">${sheetLastUpdate}</strong>`;
+              
+              // بازگرداندن پاپ‌آپ خوشگل (حالت Toast)
+              Swal.fire({
+                toast: true,
+                position: 'top',
+                icon: 'success',
+                title: 'اطلاعات با موفقیت بروزرسانی شد',
+                showConfirmButton: false,
+                timer: 2500,
+                timerProgressBar: true
+              });
             }
           });
         })
         .catch(error => {
           if(btn) btn.innerText = "🔄 دریافت آخرین دیتا از سرور";
+          Swal.fire({
+            icon: 'error',
+            title: 'خطا در ارتباط',
+            text: 'مشکلی در دریافت اطلاعات پیش آمد. اینترنت خود را بررسی کنید.'
+          });
         });
     }
 
@@ -535,7 +551,6 @@
       currentScannerMode = mode;
       stopScanner();
       
-      // نمایش کانتینر فول اسکرین
       document.getElementById("reader-container").classList.remove("hidden");
       
       qrScanner = new Html5Qrcode("reader");
@@ -543,9 +558,9 @@
       qrScanner.start(
         { facingMode: "environment" },
         { 
-          fps: 30, // افزایش حساسیت و سرعت اسکن به شدت بالا
-          qrbox: { width: 220, height: 220 }, // مربع فوکوس تلگرامی و شیک
-          aspectRatio: window.innerHeight / window.innerWidth // هماهنگی با صفحه نمایش
+          fps: 30, 
+          qrbox: { width: 220, height: 220 }, 
+          aspectRatio: window.innerHeight / window.innerWidth 
         },
         (decodedText) => {
           decodedText = toEnglishDigits(decodedText.trim());
@@ -560,7 +575,6 @@
           }
         },
         (err) => {
-          // خطاها در هنگام جستجوی بارکد طبیعی است، آن را نادیده میگیریم
         }
       ).catch(err => {
         Swal.fire('خطا', 'دوربین در دسترس نیست یا مجوز داده نشده است.', 'error');
