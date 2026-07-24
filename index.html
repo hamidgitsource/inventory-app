@@ -495,11 +495,8 @@
       // تنظیمات استاندارد و پایدار برای لنز گوشی
      const cameraConstraints = {
   facingMode: "environment",
-  // اجبار دوربین به استفاده از رزولوشن بالا
-  width: { ideal: 1920 },
-  height: { ideal: 1080 },
-  // تلاش برای قفل کردن فوکوس روی حالت پیوسته (در صورت پشتیبانی مرورگر)
-  advanced: [{ focusMode: "continuous" }]
+  width: { ideal: 1280 },
+  height: { ideal: 720 }
 };
       qrScanner.start(
         cameraConstraints,
